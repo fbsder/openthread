@@ -130,7 +130,7 @@ AbsTopResultDir                 = $(PWD)/$(TopResultDir)
 
 TargetTuple                     = arm-none-eabi
 
-ARCHS                           = cortex-m0+
+ARCHS                           = cortex-m0plus
 
 TopTargetLibDir                 = $(TopResultDir)/$(if $(1),$(1)-,)$(TargetTuple)/lib
 
@@ -229,14 +229,14 @@ endef # ARCH_template
 all: stage
 
 #
-# cortex-m0+
+# cortex-m0plus
 #
 
-cortex-m0+_target_ABI                  = cortex-m0+
-cortex-m0+_target_CPPFLAGS             = -mcpu=cortex-m0+ -mfloat-abi=soft -mthumb
-cortex-m0+_target_CFLAGS               = -mcpu=cortex-m0+ -mfloat-abi=soft -mthumb
-cortex-m0+_target_CXXFLAGS             = -mcpu=cortex-m0+ -mfloat-abi=soft -mthumb
-cortex-m0+_target_LDFLAGS              = -mcpu=cortex-m0+ -mfloat-abi=soft -mthumb
+cortex-m0plus_target_ABI                  = cortex-m0plus
+cortex-m0plus_target_CPPFLAGS             = -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb
+cortex-m0plus_target_CFLAGS               = -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb
+cortex-m0plus_target_CXXFLAGS             = -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb
+cortex-m0plus_target_LDFLAGS              = -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb
 
 # Instantiate an architecture-specific build template for each target
 # architecture.
