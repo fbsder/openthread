@@ -184,7 +184,7 @@ ThreadError otPlatRadioReceive(otInstance *aInstance, uint8_t aChannel)
 
 ThreadError otPlatRadioTransmit(otInstance *aInstance, RadioPacket *aPacket)
 {
-
+	return kThreadError_None;
 }
 
 RadioPacket *otPlatRadioGetTransmitBuffer(otInstance *aInstance)
@@ -208,6 +208,8 @@ otRadioCaps otPlatRadioGetCaps(otInstance *aInstance)
 bool otPlatRadioGetPromiscuous(otInstance *aInstance)
 {
     (void)aInstance;
+
+    return false;
 }
 
 void otPlatRadioSetPromiscuous(otInstance *aInstance, bool aEnable)
@@ -225,7 +227,6 @@ void readFrame(void)
     int i;
 
     VerifyOrExit(sState == kStateReceive || sState == kStateTransmit, ;);
-    VerifyOrExit((HWREG(RFCORE_XREG_FSMSTAT1) & RFCORE_XREG_FSMSTAT1_FIFOP) != 0, ;);
 
     // read length
 exit:
@@ -247,16 +248,6 @@ void samr21RadioProcess(otInstance *aInstance)
         }
         else
 #endif
-        {
-            // signal MAC layer for each received frame if promiscous is enabled
-            // otherwise only signal MAC layer for non-ACK frame
-            if (((HWREG(RFCORE_XREG_FRMFILT0) & RFCORE_XREG_FRMFILT0_FRAME_FILTER_EN) == 0) ||
-                (sReceiveFrame.mLength > IEEE802154_ACK_LENGTH))
-            {
-                otLogDebgPlat("Received %d bytes", sReceiveFrame.mLength);
-                otPlatRadioReceiveDone(aInstance, &sReceiveFrame, sReceiveError);
-            }
-        }
     }
 
     if (sState == kStateTransmit)
@@ -309,10 +300,12 @@ void samr21RadioProcess(otInstance *aInstance)
 
 void RFCoreRxTxIntHandler(void)
 {
+
 }
 
 void RFCoreErrIntHandler(void)
 {
+
 }
 
 uint32_t getSrcMatchEntriesEnableStatus(bool aShort)
@@ -324,12 +317,12 @@ uint32_t getSrcMatchEntriesEnableStatus(bool aShort)
 
 int8_t findSrcMatchShortEntry(const uint16_t aShortAddress)
 {
-
+	return 0;
 }
 
 int8_t findSrcMatchExtEntry(const uint8_t *aExtAddress)
 {
-
+	return 0;
 }
 
 void setSrcMatchEntryEnableStatus(bool aShort, uint8_t aEntry, bool aEnable)
@@ -339,7 +332,7 @@ void setSrcMatchEntryEnableStatus(bool aShort, uint8_t aEntry, bool aEnable)
 
 int8_t findSrcMatchAvailEntry(bool aShort)
 {
-
+	return 0;
 }
 
 void otPlatRadioEnableSrcMatch(otInstance *aInstance, bool aEnable)
@@ -349,22 +342,22 @@ void otPlatRadioEnableSrcMatch(otInstance *aInstance, bool aEnable)
 
 ThreadError otPlatRadioAddSrcMatchShortEntry(otInstance *aInstance, const uint16_t aShortAddress)
 {
-
+	return kThreadError_None;
 }
 
 ThreadError otPlatRadioAddSrcMatchExtEntry(otInstance *aInstance, const uint8_t *aExtAddress)
 {
-
+	return kThreadError_None;
 }
 
 ThreadError otPlatRadioClearSrcMatchShortEntry(otInstance *aInstance, const uint16_t aShortAddress)
 {
-
+	return kThreadError_None;
 }
 
 ThreadError otPlatRadioClearSrcMatchExtEntry(otInstance *aInstance, const uint8_t *aExtAddress)
 {
-
+	return kThreadError_None;
 }
 
 void otPlatRadioClearSrcMatchShortEntries(otInstance *aInstance)
