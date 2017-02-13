@@ -877,11 +877,11 @@ AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_RAW_LINK_API],[${OPENTHREAD_ENABLE_RAW_LIN
 
 AC_ARG_WITH(examples,
     [AS_HELP_STRING([--with-examples=TARGET],
-        [Specify the examples from one of: none, posix, cc2538, da15000 @<:@default=none@:>@.])],
+        [Specify the examples from one of: none, posix, cc2538, da15000, samr21 @<:@default=none@:>@.])],
     [
         case "${with_examples}" in
 
-        none|posix|cc2538|da15000|nrf52840)
+        none|posix|cc2538|da15000|nrf52840|samr21)
             ;;
         *)
             AC_MSG_ERROR([Invalid value ${with_examples} for --with-examples])
@@ -913,6 +913,11 @@ case ${with_examples} in
         OPENTHREAD_EXAMPLES_NRF52840=1
         AC_DEFINE_UNQUOTED([OPENTHREAD_EXAMPLES_NRF52840],[${OPENTHREAD_EXAMPLES_NRF52840}],[Define to 1 if you want to use nrf52840 examples])
         ;;
+        
+    samr21)
+        OPENTHREAD_EXAMPLES_SAMR21=1
+        AC_DEFINE_UNQUOTED([OPENTHREAD_EXAMPLES_SAMR21],[${OPENTHREAD_EXAMPLES_SAMR21}],[Define to 1 if you want to use samr21 examples])
+        ;;
 
 esac
 
@@ -933,6 +938,9 @@ AM_CONDITIONAL([OPENTHREAD_EXAMPLES_DA15000], [test "${OPENTHREAD_EXAMPLES}" = "
 
 AC_SUBST(OPENTHREAD_EXAMPLES_NRF52840)
 AM_CONDITIONAL([OPENTHREAD_EXAMPLES_NRF52840], [test "${OPENTHREAD_EXAMPLES}" = "nrf52840"])
+
+AC_SUBST(OPENTHREAD_EXAMPLES_SAMR21)
+AM_CONDITIONAL([OPENTHREAD_EXAMPLES_SAMR21], [test "${OPENTHREAD_EXAMPLES}" = "samr21"])
 
 #
 # Platform Information
@@ -1069,6 +1077,7 @@ examples/platforms/Makefile
 examples/platforms/cc2538/Makefile
 examples/platforms/da15000/Makefile
 examples/platforms/nrf52840/Makefile
+examples/platforms/samr21/Makefile
 examples/platforms/posix/Makefile
 examples/platforms/utils/Makefile
 tools/Makefile
