@@ -57,9 +57,9 @@ enum
 
 enum
 {
-    CC2538_RSSI_OFFSET = 73,
-    CC2538_CRC_BIT_MASK = 0x80,
-    CC2538_LQI_BIT_MASK = 0x7f,
+    samr21_RSSI_OFFSET = 73,
+    samr21_CRC_BIT_MASK = 0x80,
+    samr21_LQI_BIT_MASK = 0x7f,
 };
 
 static RadioPacket sTransmitFrame;
@@ -109,7 +109,7 @@ void otPlatRadioSetShortAddress(otInstance *aInstance, uint16_t address)
 
 }
 
-void cc2538RadioInit(void)
+void samr21RadioInit(void)
 {
     sTransmitFrame.mLength = 0;
     sTransmitFrame.mPsdu = sTransmitPsdu;
@@ -232,7 +232,7 @@ exit:
     return;
 }
 
-void cc2538RadioProcess(otInstance *aInstance)
+void samr21RadioProcess(otInstance *aInstance)
 {
     readFrame();
 
