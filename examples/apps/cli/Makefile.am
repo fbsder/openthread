@@ -100,11 +100,11 @@ endif
 
 if OPENTHREAD_EXAMPLES_SAMR21
 LDADD_COMMON                                                          += \
-    $(top_builddir)/examples/platforms/samr21/libopenthread-samr21.a	 \
+    $(top_builddir)/examples/platforms/samr21/libopenthread-samr21.a     \
     $(NULL)
 
 LDFLAGS_COMMON                                                        += \
-    -T $(top_srcdir)/examples/platforms/samr21/samr21.ld             	 \
+    -T $(top_srcdir)/examples/platforms/samr21/samr21.ld                 \
     $(NULL)
 endif # OPENTHREAD_EXAMPLES_SAMR21
 

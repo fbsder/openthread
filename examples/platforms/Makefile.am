@@ -34,7 +34,7 @@ DIST_SUBDIRS                            = \
     cc2538                                \
     da15000                               \
     nrf52840                              \
-    samr21								  \
+    samr21                                \
     posix                                 \
     utils                                 \
     $(NULL)
@@ -71,7 +71,7 @@ PRETTY_SUBDIRS                          = \
     cc2538                                \
     da15000                               \
     nrf52840                              \
-    samr21								  \
+    samr21                                \
     posix                                 \
     utils                                 \
     $(NULL)
