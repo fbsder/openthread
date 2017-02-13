@@ -67,7 +67,7 @@ void samr21RadioInit(void);
  * @param[in]  aInstance  The OpenThread instance structure.
  *
  */
-void samr218RadioProcess(otInstance *aInstance);
+void samr21RadioProcess(otInstance *aInstance);
 
 /**
  * This function initializes the random number service used by OpenThread.

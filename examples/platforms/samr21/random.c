@@ -58,5 +58,5 @@ uint32_t otPlatRandomGet(void)
 
 ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
 {
-
+	return kThreadError_None;
 }

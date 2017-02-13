@@ -63,7 +63,6 @@ libopenthread_samr21_a_SOURCES                                                  
 endif
 
 noinst_HEADERS                                                                          = \
-    samr21-reg.h                                                                          \
     platform-samr21.h                                                                     \
     $(NULL)
 
