@@ -1,168 +1,157 @@
-/*
- *  Copyright (c) 2016, The OpenThread Authors.
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are met:
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  3. Neither the name of the copyright holder nor the
- *     names of its contributors may be used to endorse or promote products
- *     derived from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- *  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- *  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- *  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- *  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- *  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- */
-
 /**
- * @file
- *   GCC linker script for SAMR21.
+ * \file
+ *
+ * \brief Linker script for running in internal FLASH on the SAMR21G18A
+ *
+ * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ *
+ * \asf_license_start
+ *
+ * \page License
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. The name of Atmel may not be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * 4. This software may only be redistributed and used in connection with an
+ *    Atmel microcontroller product.
+ *
+ * THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE
+ * EXPRESSLY AND SPECIFICALLY DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * \asf_license_stop
+ *
  */
 
-SEARCH_DIR(.)
-GROUP(-lgcc -lc -lnosys)
 
+OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
+OUTPUT_ARCH(arm)
+SEARCH_DIR(.)
+
+/* Memory Spaces Definitions */
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 0x00040000
-  RAM  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00008000
+  rom      (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00040000
+  ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00008000
 }
 
-OUTPUT_FORMAT ("elf32-littlearm", "elf32-bigarm", "elf32-littlearm")
+/* The stack size used by the application. NOTE: you need to adjust according to your application. */
+STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stack_size__ : 0x2000;
 
-ENTRY(Reset_Handler)
-
-FLASH_PAGE_SIZE       = 64;
-FLASH_DATA_PAGES_USED = 256;
-
+/* Section Definitions */
 SECTIONS
 {
     .text :
     {
-        KEEP(*(.isr_vector))
-        *(.text*)
+        . = ALIGN(4);
+        _sfixed = .;
+        KEEP(*(.vectors .vectors.*))
+        *(.text .text.* .gnu.linkonce.t.*)
+        *(.glue_7t) *(.glue_7)
+        *(.rodata .rodata* .gnu.linkonce.r.*)
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
 
+        /* Support C constructors, and C destructors in both user code
+           and the C library. This also provides support for C++ code. */
+        . = ALIGN(4);
         KEEP(*(.init))
+        . = ALIGN(4);
+        __preinit_array_start = .;
+        KEEP (*(.preinit_array))
+        __preinit_array_end = .;
+
+        . = ALIGN(4);
+        __init_array_start = .;
+        KEEP (*(SORT(.init_array.*)))
+        KEEP (*(.init_array))
+        __init_array_end = .;
+
+        . = ALIGN(4);
+        KEEP (*crtbegin.o(.ctors))
+        KEEP (*(EXCLUDE_FILE (*crtend.o) .ctors))
+        KEEP (*(SORT(.ctors.*)))
+        KEEP (*crtend.o(.ctors))
+
+        . = ALIGN(4);
         KEEP(*(.fini))
 
-        /* .ctors */
-        *crtbegin.o(.ctors)
-        *crtbegin?.o(.ctors)
-        *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
-        *(SORT(.ctors.*))
-        *(.ctors)
+        . = ALIGN(4);
+        __fini_array_start = .;
+        KEEP (*(.fini_array))
+        KEEP (*(SORT(.fini_array.*)))
+        __fini_array_end = .;
 
-        /* .dtors */
-        *crtbegin.o(.dtors)
-        *crtbegin?.o(.dtors)
-        *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
-        *(SORT(.dtors.*))
-        *(.dtors)
+        KEEP (*crtbegin.o(.dtors))
+        KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
+        KEEP (*(SORT(.dtors.*)))
+        KEEP (*crtend.o(.dtors))
 
-        *(.rodata*)
+        . = ALIGN(4);
+        _efixed = .;            /* End of text section */
+    } > rom
 
-        KEEP(*(.eh_frame*))
-    } > FLASH
-
-    .ARM.extab :
-    {
-        *(.ARM.extab* .gnu.linkonce.armextab.*)
-    } > FLASH
-
-    __exidx_start = .;
+    /* .ARM.exidx is sorted, so has to go in its own output section.  */
+    PROVIDE_HIDDEN (__exidx_start = .);
     .ARM.exidx :
     {
-        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } > FLASH
-    __exidx_end = .;
+      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+    } > rom
+    PROVIDE_HIDDEN (__exidx_end = .);
 
-    __etext = .;
+    . = ALIGN(4);
+    _etext = .;
 
-    .data : AT (__etext)
-    {
-        __data_start__ = .;
-        *(vtable)
-        *(.data*)
-
-        . = ALIGN(4);
-        /* preinit data */
-        PROVIDE_HIDDEN (__preinit_array_start = .);
-        KEEP(*(.preinit_array))
-        PROVIDE_HIDDEN (__preinit_array_end = .);
-
-        . = ALIGN(4);
-        /* init data */
-        PROVIDE_HIDDEN (__init_array_start = .);
-        KEEP(*(SORT(.init_array.*)))
-        KEEP(*(.init_array))
-        PROVIDE_HIDDEN (__init_array_end = .);
-
-
-        . = ALIGN(4);
-        /* finit data */
-        PROVIDE_HIDDEN (__fini_array_start = .);
-        KEEP(*(SORT(.fini_array.*)))
-        KEEP(*(.fini_array))
-        PROVIDE_HIDDEN (__fini_array_end = .);
-
-        KEEP(*(.jcr*))
-        . = ALIGN(4);
-        /* All data end */
-        __data_end__ = .;
-
-    } > RAM
-
-    .bss :
+    .relocate : AT (_etext)
     {
         . = ALIGN(4);
-        __bss_start__ = .;
-        *(.bss*)
+        _srelocate = .;
+        *(.ramfunc .ramfunc.*);
+        *(.data .data.*);
+        . = ALIGN(4);
+        _erelocate = .;
+    } > ram
+
+    /* .bss section which is used for uninitialized data */
+    .bss (NOLOAD) :
+    {
+        . = ALIGN(4);
+        _sbss = . ;
+        _szero = .;
+        *(.bss .bss.*)
         *(COMMON)
         . = ALIGN(4);
-        __bss_end__ = .;
-    } > RAM
+        _ebss = . ;
+        _ezero = .;
+    } > ram
 
-    .heap (COPY):
+    /* stack section */
+    .stack (NOLOAD):
     {
-        __HeapBase = .;
-        __end__ = .;
-        PROVIDE(end = .);
-        KEEP(*(.heap*))
-        __HeapLimit = .;
-    } > RAM
+        . = ALIGN(8);
+        _sstack = .;
+        . = . + STACK_SIZE;
+        . = ALIGN(8);
+        _estack = .;
+    } > ram
 
-    /* .stack_dummy section doesn't contains any symbols. It is only
-     * used for linker to calculate size of stack sections, and assign
-     * values to stack symbols later */
-    .stack_dummy (COPY):
-    {
-        KEEP(*(.stack*))
-    } > RAM
-
-    __flash_data_end = (ORIGIN(FLASH) + LENGTH(FLASH));
-    __flash_data_start = (__flash_data_end - (FLASH_PAGE_SIZE * FLASH_DATA_PAGES_USED));
-
-    /* Assure that code does not overlap flash data area.*/
-    ASSERT((__flash_data_start >= __etext), "Error: Code overlaps flash data area.")
-
-    /* Set stack top to end of RAM, and stack limit move down by
-     * size of stack_dummy section */
-    __StackTop = ORIGIN(RAM) + LENGTH(RAM);
-    __StackLimit = __StackTop - SIZEOF(.stack_dummy);
-    PROVIDE(__stack = __StackTop);
-
-    /* Check if data + heap + stack exceeds RAM limit */
-    ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
+    . = ALIGN(4);
+    _end = . ;
 }

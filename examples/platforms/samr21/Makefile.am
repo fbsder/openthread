@@ -31,9 +31,16 @@ include $(abs_top_nlbuild_autotools_dir)/automake/pre.am
 lib_LIBRARIES                                                                           = libopenthread-samr21.a
 
 libopenthread_samr21_a_CPPFLAGS                                                         = \
+    -D__SAMR21G18A__                                                                      \
     -I$(top_srcdir)/include                                                               \
     -I$(top_srcdir)/examples/platforms                                                    \
     -I$(top_srcdir)/src/core                                                              \
+    -I$(top_srcdir)/third_party/microchip/cmsis                                           \
+    -I$(top_srcdir)/third_party/microchip/samr21/include                                  \
+    -I$(top_srcdir)/third_party/microchip/samr21/include/instance                         \
+    -I$(top_srcdir)/third_party/microchip/samr21/include/component                        \
+    -I$(top_srcdir)/third_party/microchip/samr21/include/pio                              \
+    -I$(top_srcdir)/third_party/microchip/samr21/source                                   \
     -Wno-unknown-pragmas                                                                  \
     -Wno-sign-compare                                                                     \
     -Wno-unused-function                                                                  \
@@ -43,6 +50,7 @@ libopenthread_samr21_a_CPPFLAGS                                                 
     -Wno-unused-variable                                                                  \
     -Wno-missing-field-initializers                                                       \
     -fno-strict-aliasing                                                                  \
+    -Wno-pedantic                                                                         \
     $(NULL)
 
 libopenthread_samr21_a_SOURCES                                                          = \
@@ -54,6 +62,8 @@ libopenthread_samr21_a_SOURCES                                                  
     random.c                                                                              \
     startup-gcc.c                                                                         \
     uart.c                                                                                \
+    @top_builddir@/third_party/microchip/samr21/source/gcc/startup_samr21.c               \
+    @top_builddir@/third_party/microchip/samr21/source/system_samr21.c                    \
     $(NULL)
     
 if OPENTHREAD_ENABLE_DIAG
