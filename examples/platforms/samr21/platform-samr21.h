@@ -40,16 +40,6 @@
 
 #include <samr21.h>
 
-#define IRQ_EIC         4   /**<  4 SAMR21G18A External Interrupt Controller (EIC) */
-#define IRQ_DMAC        6   /**<  6 SAMR21G18A Direct Memory Access Controller (DMAC) */
-#define IRQ_EVSYS       8   /**<  8 SAMR21G18A Event System Interface (EVSYS) */
-#define IRQ_SERCOM0     9   /**<  9 SAMR21G18A Serial Communication Interface 0 (SERCOM0) */
-#define IRQ_SERCOM1     10  /**< 10 SAMR21G18A Serial Communication Interface 1 (SERCOM1) */
-#define IRQ_SERCOM2     11  /**< 11 SAMR21G18A Serial Communication Interface 2 (SERCOM2) */
-#define IRQ_SERCOM3     12  /**< 12 SAMR21G18A Serial Communication Interface 3 (SERCOM3) */
-#define IRQ_SERCOM4     13  /**< 13 SAMR21G18A Serial Communication Interface 4 (SERCOM4) */
-#define IRQ_SERCOM5     14  /**< 14 SAMR21G18A Serial Communication Interface 5 (SERCOM5) */
-
 // Global OpenThread instance structure
 extern otInstance *sInstance;
 
@@ -85,7 +75,7 @@ void samr21RadioProcess(otInstance *aInstance);
  * This function initializes the random number service used by OpenThread.
  *
  */
-void samr21RandomInit(void);
+void randomInit(void);
 
 /**
  * This function performs UART driver processing.
@@ -104,6 +94,42 @@ enum FUNCS {FUNCA = 0, FUNCB, FUNCC, FUNCD, FUNCE, FUNCF, FUNCG, FUNCH};
 
 enum gpio_port { GPIO_PORTA, GPIO_PORTB, GPIO_PORTC };
 
-void set_pin_func(uint32_t portpin, enum FUNCS func);
+void setPinFunc(uint32_t portpin, enum FUNCS func);
+int8_t findExternalInterruptMap(uint32_t portpin);
+
+#define GPIO_DIR_IN             (0 << 0)
+#define GPIO_DIR_OUT            (1 << 0)
+#define GPIO_DIR_MASK           1
+
+#define GPIO_INT                (1 << 1)
+#define GPIO_INT_ACTIVE_LOW	    (0 << 2)
+#define GPIO_INT_ACTIVE_HIGH    (1 << 2)
+#define GPIO_INT_CLOCK_SYNC     (1 << 3)
+#define GPIO_INT_DEBOUNCE       (1 << 4)
+#define GPIO_INT_LEVEL	        (0 << 5)
+#define GPIO_INT_EDGE           (1 << 5)
+#define GPIO_INT_DOUBLE_EDGE    (1 << 6)
+
+#define GPIO_POL_POS		    7
+#define GPIO_POL_NORMAL         (0 << GPIO_POL_POS)
+#define GPIO_POL_INV            (1 << GPIO_POL_POS)
+#define GPIO_POL_MASK           (1 << GPIO_POL_POS)
+
+#define GPIO_PUD_POS            8
+#define GPIO_PUD_NORMAL         (0 << GPIO_PUD_POS)
+#define GPIO_PUD_PULL_UP        (1 << GPIO_PUD_POS)
+#define GPIO_PUD_PULL_DOWN      (2 << GPIO_PUD_POS)
+#define GPIO_PUD_MASK           (3 << GPIO_PUD_POS)
+
+#define GPIO_PIN_ENABLE         (1 << 10)
+#define GPIO_PIN_DISABLE        (1 << 11)
+
+#define SPI_MODE_CPOL           0x1
+#define SPI_MODE_CPHA           0x2
+#define SPI_MODE_LOOP           0x4
+#define SPI_MODE_MASK           0x7
+#define SPI_MODE(_in_)          ((_in_) & SPI_MODE_MASK)
+#define SPI_TRANSFER_MSB        (0 << 3)
+#define SPI_TRANSFER_LSB        (1 << 3)
 
 #endif  // PLATFORM_SAMR21_H_

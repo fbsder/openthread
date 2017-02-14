@@ -68,7 +68,7 @@ void SystemInit(void)
      * adjust NVM wait states, see table 42.30 (p. 1070) in the datasheet
      */
     /* PM->APBAMASK.reg |= PM_AHBMASK_NVMCTRL; */
-    NVMCTRL->CTRLB.reg.RWS = 1;
+    NVMCTRL->CTRLB.bit.RWS = 1;
     /* PM->APBAMASK.reg &= ~PM_AHBMASK_NVMCTRL; */
 #endif
     /* Disable watchdog timer, not used by system */

@@ -38,11 +38,6 @@
 #include <common/code_utils.hpp>
 #include "platform-samr21.h"
 
-enum
-{
-    FLASH_PAGE_SIZE = 0x40,
-};
-
 static ThreadError romStatusToThread(int32_t aStatus)
 {
     ThreadError error = kThreadError_None;

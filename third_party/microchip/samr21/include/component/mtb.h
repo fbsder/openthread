@@ -362,7 +362,7 @@ typedef struct {
   __IO MTB_POSITION_Type         POSITION;    /**< \brief Offset: 0x000 (R/W 32) MTB Position */
   __IO MTB_MASTER_Type           MASTER;      /**< \brief Offset: 0x004 (R/W 32) MTB Master */
   __IO MTB_FLOW_Type             FLOW;        /**< \brief Offset: 0x008 (R/W 32) MTB Flow */
-  __I  MTB_BASE_Type             BASE;        /**< \brief Offset: 0x00C (R/  32) MTB Base */
+  __I  MTB_BASE_Type             MTBBASE;     /**< \brief Offset: 0x00C (R/  32) MTB Base */
        RoReg8                    Reserved1[0xEF0];
   __IO MTB_ITCTRL_Type           ITCTRL;      /**< \brief Offset: 0xF00 (R/W 32) MTB Integration Mode Control */
        RoReg8                    Reserved2[0x9C];

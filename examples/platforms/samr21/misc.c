@@ -26,8 +26,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread-types.h>
 #include <platform/misc.h>
+
 #include "platform-samr21.h"
 
 void otPlatReset(otInstance *aInstance)

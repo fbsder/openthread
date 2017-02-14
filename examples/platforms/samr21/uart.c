@@ -87,8 +87,8 @@ ThreadError otPlatUartEnable(void)
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY) {}
 
     /* configure pins */
-    set_pin_func(EDBG_COM_TX, FUNCD);
-    set_pin_func(EDBG_COM_RX, FUNCD);
+    setPinFunc(EDBG_COM_TX, FUNCD);
+    setPinFunc(EDBG_COM_RX, FUNCD);
 
     /* reset the UART device */
     uart->CTRLA.reg = SERCOM_USART_CTRLA_SWRST;

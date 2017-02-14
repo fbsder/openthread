@@ -35,6 +35,9 @@
 #include <platform/uart.h>
 #include "platform-samr21.h"
 
+#include <openthread-core-config.h>
+#include <openthread-config.h>
+
 otInstance *sInstance;
 
 void PlatformInit(int argc, char *argv[])
