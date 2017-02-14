@@ -62,6 +62,8 @@ libopenthread_samr21_a_SOURCES                                                  
     random.c                                                                              \
     startup-gcc.c                                                                         \
     uart.c                                                                                \
+    gpio.c                                                                                \
+    tinymt32/tinymt32.c                                                                   \
     @top_builddir@/third_party/microchip/samr21/source/gcc/startup_samr21.c               \
     @top_builddir@/third_party/microchip/samr21/source/system_samr21.c                    \
     $(NULL)
