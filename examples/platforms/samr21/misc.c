@@ -33,11 +33,11 @@
 void otPlatReset(otInstance *aInstance)
 {
     (void)aInstance;
+    NVIC_SystemReset();
 }
 
 otPlatResetReason otPlatGetResetReason(otInstance *aInstance)
 {
     (void)aInstance;
-    // TODO: Write me!
     return kPlatResetReason_PowerOn;
 }

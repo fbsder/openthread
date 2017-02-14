@@ -56,8 +56,7 @@ static bool sIsRunning = false;
 
 void samr21AlarmInit(void)
 {
-	SysTick->LOAD = kSystemClock / kTicksPerSec;
-	SysTick->CTRL = SysTick_CTRL_ENABLE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_CLKSOURCE_Msk;
+	SysTick_Config(kSystemClock / kTicksPerSec);
 }
 
 uint32_t otPlatAlarmGetNow(void)

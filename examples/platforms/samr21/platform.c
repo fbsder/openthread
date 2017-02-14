@@ -40,8 +40,8 @@ otInstance *sInstance;
 void PlatformInit(int argc, char *argv[])
 {
     samr21AlarmInit();
-    samr21RandomInit();
     samr21RadioInit();
+    randomInit();
     otPlatUartEnable();
 
     (void)argc;

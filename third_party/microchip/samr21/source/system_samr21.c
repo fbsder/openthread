@@ -52,6 +52,9 @@
 
 uint32_t SystemCoreClock = __SYSTEM_CLOCK;/*!< System Clock Frequency (Core Clock)*/
 
+#define CLOCK_PLL_MUL       (47U)               /* must be >= 31 & <= 95 */
+#define CLOCK_PLL_DIV       (1U)                /* adjust to your needs */
+
 /**
  * Initialize the system
  *

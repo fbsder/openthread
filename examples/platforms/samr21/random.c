@@ -32,31 +32,39 @@
  *
  */
 
+#include <stdint.h>
 #include <openthread-types.h>
 
 #include <common/code_utils.hpp>
 #include <platform/radio.h>
 #include <platform/random.h>
+
+#include "tinymt32/tinymt32.h"
+
 #include "platform-samr21.h"
 
-static void generateRandom(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
+static tinymt32_t _random;
+
+#define RND_SEED 0xC0FFEE
+
+void randomInit(void)
 {
-
-}
-
-void samr21RandomInit(void)
-{
-
+	tinymt32_init(&_random, RND_SEED);
 }
 
 uint32_t otPlatRandomGet(void)
 {
-    uint32_t random = 0;
-
-    return random;
+    return tinymt32_generate_uint32(&_random);
 }
 
 ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
 {
-	return kThreadError_None;
+    for (uint16_t length = 0; length < aInputLength; length++)
+    {
+        aOutput[length] = (uint8_t)otPlatRandomGet();
+    }
+
+    *aOutputLength = aInputLength;
+
+    return kThreadError_None;
 }
