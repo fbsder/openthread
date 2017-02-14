@@ -38,6 +38,8 @@
 #include <stdint.h>
 #include <openthread-types.h>
 
+#include <samr21.h>
+
 // Global OpenThread instance structure
 extern otInstance *sInstance;
 
@@ -81,6 +83,5 @@ void samr21RandomInit(void);
  */
 void samr21UartProcess(void);
 
-void samr21ClockInit(void);
 
 #endif  // PLATFORM_SAMR21_H_

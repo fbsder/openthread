@@ -28,11 +28,11 @@
 
 /**
  * @file
- *   This file includes cc2538 compile-time configuration constants for OpenThread.
+ *   This file includes samr21 compile-time configuration constants for OpenThread.
  */
 
-#ifndef OPENTHREAD_CORE_CC2538_CONFIG_H_
-#define OPENTHREAD_CORE_CC2538_CONFIG_H_
+#ifndef OPENTHREAD_CORE_SAMR21_CONFIG_H_
+#define OPENTHREAD_CORE_SAMR21_CONFIG_H_
 
  /**
   * @def OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ACK_TIMEOUT
@@ -58,4 +58,4 @@
   */
 #define OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ENERGY_SCAN          1
 
-#endif  // OPENTHREAD_CORE_CC2538_CONFIG_H_
+#endif  // OPENTHREAD_CORE_SAMR21_CONFIG_H_
