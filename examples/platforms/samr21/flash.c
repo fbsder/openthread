@@ -26,7 +26,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -53,6 +52,11 @@ static uint8_t page_buffer[NVMCTRL_PAGE_SIZE];
 static uint16_t page_size;
 static uint16_t number_of_pages;
 static bool manual_page_write = false;
+
+static inline uint32_t mapAddress(uint32_t aAddress)
+{
+    return aAddress + FLASH_START_ADDR;
+}
 
 ThreadError utilsFlashInit(void)
 {
@@ -145,6 +149,7 @@ ThreadError utilsFlashErasePage(uint32_t aAddress)
         return kThreadError_Failed;
     }
 
+    return kThreadError_None;
 }
 
 ThreadError utilsFlashStatusWait(uint32_t aTimeout)
@@ -169,7 +174,6 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
 {
     int32_t status;
     uint32_t busy = 1;
-    uint32_t *data;
     uint32_t size = 0;
     uint32_t nvm_address;
     uint32_t ctrlb_bak;
@@ -309,17 +313,21 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
         nvm_module->CTRLB.reg = ctrlb_bak;
     }
 
-exit:
-    return size;
+    return aSize;
 }
 
 uint32_t utilsFlashRead(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
 {
     uint32_t result = 0;
+    uint8_t *from = (uint8_t *) aAddress;
     VerifyOrExit(aData, ;);
     VerifyOrExit(aAddress < utilsFlashGetSize(), ;);
 
-    memcpy(aData, (uint8_t *) mapAddress(aAddress), aSize);
+    //memcpy(aData, (uint8_t *) mapAddress(aAddress), aSize);
+    for (int i = 0; i < aSize; i++)
+    {
+        aData[i] = from[i];
+    }
     result = aSize;
 
 exit:

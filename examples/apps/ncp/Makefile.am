@@ -125,10 +125,6 @@ ot_ncp_LDFLAGS                                                        += \
     $(NULL)
 endif # OPENTHREAD_EXAMPLES_SAMR21
 
-ot_ncp_SOURCES                                                         = \
-    main.c                                                               \
-    $(NULL)
-
 if OPENTHREAD_BUILD_COVERAGE
 CLEANFILES                                                             = $(wildcard *.gcda *.gcno)
 endif # OPENTHREAD_BUILD_COVERAGE
