@@ -28,6 +28,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -41,14 +42,13 @@
 extern uint32_t __flash_data_start;
 extern uint32_t __flash_data_end;
 
-#define FLASH_START_ADDR     ((uint32_t)&__flash_data_start)
-#define FLASH_END_ADDR       ((uint32_t)&__flash_data_end)
-#define NVM_MEMORY        ((volatile uint16_t *)FLASH_ADDR)
-#define NVM_ERRORS_MASK   (NVMCTRL_STATUS_PROGE | \
-                           NVMCTRL_STATUS_LOCKE | \
-                           NVMCTRL_STATUS_NVME)
+#define FLASH_START_ADDR    ((uint32_t)&__flash_data_start)
+#define FLASH_END_ADDR      ((uint32_t)&__flash_data_end)
+#define NVM_MEMORY        	((volatile uint16_t *)FLASH_ADDR)
+#define NVM_ERRORS_MASK   	(NVMCTRL_STATUS_PROGE   | \
+                           	   NVMCTRL_STATUS_LOCKE | \
+							   NVMCTRL_STATUS_NVME)
 
-static uint8_t page_buffer[NVMCTRL_PAGE_SIZE];
 static uint16_t page_size;
 static uint16_t number_of_pages;
 static bool manual_page_write = false;
@@ -58,6 +58,12 @@ static inline uint32_t mapAddress(uint32_t aAddress)
     return aAddress + FLASH_START_ADDR;
 }
 
+/**
+ * Perform any initialization for flash driver.
+ *
+ * @retval ::kThreadError_None    Initialize flash driver success.
+ * @retval ::kThreadError_Failed  Initialize flash driver fail.
+ */
 ThreadError utilsFlashInit(void)
 {
     VerifyOrExit((FLASH_START_ADDR % NVMCTRL_PAGE_SIZE) == 0, ;);
@@ -96,11 +102,31 @@ exit:
     return kThreadError_Failed;
 }
 
+/**
+ * Get the size of flash that can be read/write by the caller.
+ * The usable flash size is always the multiple of flash page size.
+ *
+ * @returns The size of the flash.
+ */
 uint32_t utilsFlashGetSize(void)
 {
     return FLASH_END_ADDR - FLASH_START_ADDR;
 }
 
+/**
+ * Erase one flash page that include the input address.
+ * This is a non-blocking function. It can work with utilsFlashStatusWait to check when erase is done.
+ *
+ * The flash address starts from 0, and this function maps the input address to the physical address of flash for erasing.
+ * 0 is always mapped to the beginning of one flash page.
+ * The input address should never be mapped to the firmware space or any other protected flash space.
+ *
+ * @param[in]  aAddress  The start address of the flash to erase.
+ *
+ * @retval kThreadError_None           Erase flash operation is started.
+ * @retval kThreadError_Failed         Erase flash operation is not started.
+ * @retval kThreadError_InvalidArgs    aAddress is out of range of flash or not aligend.
+ */
 ThreadError utilsFlashErasePage(uint32_t aAddress)
 {
     int32_t status;
@@ -110,7 +136,7 @@ ThreadError utilsFlashErasePage(uint32_t aAddress)
     ThreadError error = kThreadError_None;
 
     flash_offset = (aAddress) & ~(NVMCTRL_ROW_PAGES * page_size - 1);
-    address = FLASH_START_ADDR + aAddress - flash_offset;
+    address = FLASH_START_ADDR + (aAddress - flash_offset);
 
     /* Check if the row address is valid */
     if (address > ((uint32_t) page_size * number_of_pages))
@@ -135,23 +161,21 @@ ThreadError utilsFlashErasePage(uint32_t aAddress)
 
     /* Set address and command */
     nvm_module->ADDR.reg = (uintptr_t) & NVM_MEMORY[address / 4];
-
     nvm_module->CTRLA.reg = NVMCTRL_CTRLA_CMD_ER | NVMCTRL_CTRLA_CMDEX_KEY;
-
-    if (!(nvm_module->INTFLAG.reg & NVMCTRL_INTFLAG_READY))
-    {
-        return kThreadError_Failed;
-    }
-
-    /* There existed error in NVM erase operation */
-    if ((nvm_module->STATUS.reg & NVM_ERRORS_MASK) != 0)
-    {
-        return kThreadError_Failed;
-    }
 
     return kThreadError_None;
 }
 
+/**
+  * Check whether flash is ready or busy.
+  *
+  * @param[in]  aTimeout  The interval in milliseconds waiting for the flash operation to be done and become ready again.
+  *                       zero indicates that it is a polling function, and returns current status of flash immediately.
+  *                       non-zero indicates that it is blocking there until the operation is done and become ready, or timeout expires.
+  *
+  * @retval kThreadError_None           Flash is ready for any operation.
+  * @retval kThreadError_Busy           Flash is busy.
+  */
 ThreadError utilsFlashStatusWait(uint32_t aTimeout)
 {
     ThreadError error = kThreadError_None;
@@ -170,6 +194,21 @@ exit:
     return error;
 }
 
+/**
+ * Write flash. The write operation only clears bits, but never set bits.
+ *
+ * The flash address starts from 0, and this function maps the input address to the physical address of flash for writing.
+ * 0 is always mapped to the beginning of one flash page.
+ * The input address should never be mapped to the firmware space or any other protected flash space.
+ *
+ * @param[in]  aAddress  The start address of the flash to write.
+ * @param[in]  aData     The pointer of the data to write.
+ * @param[in]  aSize     The size of the data to write.
+ *
+ * @returns The actual size of octets write to flash.
+ *          It is expected the same as aSize, and may be less than aSize.
+ *          0 indicates that something wrong happens when writing.
+ */
 uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
 {
     int32_t status;
@@ -183,32 +222,31 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
 
     if (aAddress > ((uint32_t) page_size * number_of_pages))
     {
-        return kThreadError_InvalidArgs;
+        return 0;
     }
 
     /* Check if the write address not aligned to the start of a page */
     if (aAddress & (page_size - 1))
     {
-        return kThreadError_InvalidArgs;
+        return 0;
     }
 
     /* Check if the write length is longer than an NVM page */
     if (aSize > page_size)
     {
-        return kThreadError_InvalidArgs;
+        return 0;
     }
 
     if (!(nvm_module->INTFLAG.reg & NVMCTRL_INTFLAG_READY))
     {
-        return kThreadError_Failed;
+        return 0;
     }
 
     /* Erase the page buffer before buffering new data */
     nvm_module->CTRLA.reg = NVMCTRL_CTRLA_CMD_PBC | NVMCTRL_CTRLA_CMDEX_KEY;
 
-    if (!(nvm_module->INTFLAG.reg & NVMCTRL_INTFLAG_READY))
+    while (!(nvm_module->INTFLAG.reg & NVMCTRL_INTFLAG_READY))
     {
-        return kThreadError_Failed;
     }
 
     /* Clear error flags */
@@ -223,13 +261,13 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
         uint16_t data;
 
         /* Copy first byte of the 16-bit chunk to the temporary buffer */
-        data = page_buffer[i];
+        data = aData[i];
 
         /* If we are not at the end of a write request with an odd byte count,
          * store the next byte of data as well */
         if (i < (aSize - 1))
         {
-            data |= (page_buffer[i + 1] << 8);
+            data |= (aData[i + 1] << 8);
         }
 
         /* Store next 16-bit chunk to the NVM memory space */
@@ -241,12 +279,6 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
      */
     if ((manual_page_write == false) && (aSize < NVMCTRL_PAGE_SIZE))
     {
-        /* Check that the address given is valid  */
-        if (aAddress > ((uint32_t) page_size * number_of_pages) && !(aAddress >= NVMCTRL_AUX0_ADDRESS && aAddress <= NVMCTRL_AUX1_ADDRESS))
-        {
-            return kThreadError_InvalidArgs;
-        }
-
         /* Turn off cache before issuing flash commands */
         ctrlb_bak = nvm_module->CTRLB.reg;
         nvm_module->CTRLB.reg = ctrlb_bak | NVMCTRL_CTRLB_CACHEDIS;
@@ -258,54 +290,14 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
         {
             /* Restore the setting */
             nvm_module->CTRLB.reg = ctrlb_bak;
-            return kThreadError_Failed;
+            return 0;
         }
 
-        switch (NVMCTRL_CTRLA_CMD_WP)
-        {
-
-        /* Commands requiring address (protected) */
-        case NVMCTRL_CTRLA_CMD_EAR:
-        case NVMCTRL_CTRLA_CMD_WAP:
-
-            /* Auxiliary space cannot be accessed if the security bit is set */
-            if (nvm_module->STATUS.reg & NVMCTRL_STATUS_SB)
-            {
-                /* Restore the setting */
-                nvm_module->CTRLB.reg = ctrlb_bak;
-                return kThreadError_Failed;
-            }
-
-            /* Set address, command will be issued elsewhere */
-            nvm_module->ADDR.reg = (uintptr_t) & NVM_MEMORY[aAddress / 4];
-            break;
-
-            /* Commands requiring address (unprotected) */
-        case NVMCTRL_CTRLA_CMD_ER:
-        case NVMCTRL_CTRLA_CMD_WP:
-        case NVMCTRL_CTRLA_CMD_LR:
-        case NVMCTRL_CTRLA_CMD_UR:
-            /* Set address, command will be issued elsewhere */
-            nvm_module->ADDR.reg = (uintptr_t) & NVM_MEMORY[aAddress / 4];
-            break;
-
-            /* Commands not requiring address */
-        case NVMCTRL_CTRLA_CMD_PBC:
-        case NVMCTRL_CTRLA_CMD_SSB:
-        case NVMCTRL_CTRLA_CMD_SPRM:
-        case NVMCTRL_CTRLA_CMD_CPRM:
-            break;
-
-        default:
-            /* Restore the setting */
-            nvm_module->CTRLB.reg = ctrlb_bak;
-            return kThreadError_InvalidArgs;
-        }
-
-        /* Set command */
+        /* Set address and command */
+        nvm_module->ADDR.reg = (uintptr_t) & NVM_MEMORY[aAddress / 4];
         nvm_module->CTRLA.reg = NVMCTRL_CTRLA_CMD_WP | NVMCTRL_CTRLA_CMDEX_KEY;
 
-        if (!(nvm_module->INTFLAG.reg & NVMCTRL_INTFLAG_READY))
+        while (!(nvm_module->INTFLAG.reg & NVMCTRL_INTFLAG_READY))
         {
         }
 
@@ -316,18 +308,29 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
     return aSize;
 }
 
+/**
+ * Read flash.
+ *
+ * The flash address starts from 0, and this function maps the input address to the physical address of flash for reading.
+ * 0 is always mapped to the beginning of one flash page.
+ * The input address should never be mapped to the firmware space or any other protected flash space.
+ *
+ * @param[in]   aAddress  The start address of the flash to read.
+ * @param[Out]  aData     The pointer of buffer for reading.
+ * @param[in]   aSize     The size of the data to read.
+ *
+ * @returns The actual size of octets read to buffer.
+ *          It is expected the same as aSize, and may be less than aSize.
+ *          0 indicates that something wrong happens when reading.
+ */
 uint32_t utilsFlashRead(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
 {
     uint32_t result = 0;
-    uint8_t *from = (uint8_t *) aAddress;
     VerifyOrExit(aData, ;);
-    VerifyOrExit(aAddress < utilsFlashGetSize(), ;);
+    VerifyOrExit(aSize < utilsFlashGetSize(), ;);
 
-    //memcpy(aData, (uint8_t *) mapAddress(aAddress), aSize);
-    for (int i = 0; i < aSize; i++)
-    {
-        aData[i] = from[i];
-    }
+    memcpy(aData, (uint8_t *) mapAddress(aAddress), aSize);
+
     result = aSize;
 
 exit:
