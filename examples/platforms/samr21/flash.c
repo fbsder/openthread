@@ -26,7 +26,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -39,6 +38,9 @@
 #include <common/code_utils.hpp>
 #include "platform-samr21.h"
 
+extern uint32_t __flash_data_start;
+extern uint32_t __flash_data_end;
+
 #define FLASH_START_ADDR     ((uint32_t)&__flash_data_start)
 #define FLASH_END_ADDR       ((uint32_t)&__flash_data_end)
 #define NVM_MEMORY        ((volatile uint16_t *)FLASH_ADDR)
@@ -49,11 +51,17 @@
 static uint8_t page_buffer[NVMCTRL_PAGE_SIZE];
 static uint16_t page_size;
 static uint16_t number_of_pages;
+static bool manual_page_write = false;
+
+static inline uint32_t mapAddress(uint32_t aAddress)
+{
+    return aAddress + FLASH_START_ADDR;
+}
 
 ThreadError utilsFlashInit(void)
 {
-    assert((FLASH_START_ADDR % NVMCTRL_PAGE_SIZE) == 0);
-    assert((FLASH_END_ADDR % NVMCTRL_PAGE_SIZE) == 0);
+    VerifyOrExit((FLASH_START_ADDR % NVMCTRL_PAGE_SIZE) == 0, ;);
+    VerifyOrExit((FLASH_END_ADDR % NVMCTRL_PAGE_SIZE) == 0, ;);
 
     uint8_t wait_state;
     Nvmctrl * const nvm_module = NVMCTRL;
@@ -83,6 +91,9 @@ ThreadError utilsFlashInit(void)
     }
 
     return kThreadError_None;
+
+exit:
+    return kThreadError_Failed;
 }
 
 uint32_t utilsFlashGetSize(void)
@@ -99,7 +110,7 @@ ThreadError utilsFlashErasePage(uint32_t aAddress)
     ThreadError error = kThreadError_None;
 
     flash_offset = (aAddress) & ~(NVMCTRL_ROW_PAGES * page_size - 1);
-    address = FLASH_BASE + aAddress - flash_offset;
+    address = FLASH_START_ADDR + aAddress - flash_offset;
 
     /* Check if the row address is valid */
     if (address > ((uint32_t) page_size * number_of_pages))
@@ -138,8 +149,7 @@ ThreadError utilsFlashErasePage(uint32_t aAddress)
         return kThreadError_Failed;
     }
 
-exit:
-    return error;
+    return kThreadError_None;
 }
 
 ThreadError utilsFlashStatusWait(uint32_t aTimeout)
@@ -164,7 +174,6 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
 {
     int32_t status;
     uint32_t busy = 1;
-    uint32_t *data;
     uint32_t size = 0;
     uint32_t nvm_address;
     uint32_t ctrlb_bak;
@@ -304,17 +313,21 @@ uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
         nvm_module->CTRLB.reg = ctrlb_bak;
     }
 
-exit:
-    return size;
+    return aSize;
 }
 
 uint32_t utilsFlashRead(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
 {
     uint32_t result = 0;
+    uint8_t *from = (uint8_t *) aAddress;
     VerifyOrExit(aData, ;);
     VerifyOrExit(aAddress < utilsFlashGetSize(), ;);
 
-    memcpy(aData, (uint8_t *) mapAddress(aAddress), aSize);
+    //memcpy(aData, (uint8_t *) mapAddress(aAddress), aSize);
+    for (int i = 0; i < aSize; i++)
+    {
+        aData[i] = from[i];
+    }
     result = aSize;
 
 exit:

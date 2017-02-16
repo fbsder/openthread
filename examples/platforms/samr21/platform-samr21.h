@@ -38,7 +38,9 @@
 #include <stdint.h>
 #include <openthread-types.h>
 
+#ifndef __ATSAMR21G18A__
 #define __ATSAMR21G18A__
+#endif
 
 #include <samr21.h>
 

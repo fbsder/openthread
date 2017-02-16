@@ -162,5 +162,5 @@ SECTIONS
     __flash_data_end = (ORIGIN(rom) + LENGTH(rom));
     __flash_data_start = (__flash_data_end - (FLASH_PAGE_SIZE * FLASH_DATA_PAGES_USED));
     /* Assure that code does not overlap flash data area.*/
-    ASSERT((__flash_data_start >= __etext), "Error: Code overlaps flash data area.")
+    ASSERT((__flash_data_start >= _etext), "Error: Code overlaps flash data area.")
 }
