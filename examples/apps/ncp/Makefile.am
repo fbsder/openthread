@@ -52,6 +52,10 @@ ot_ncp_LDADD                                                          += \
     $(NULL)
 endif # OPENTHREAD_ENABLE_BUILTIN_MBEDTLS
 
+ot_ncp_SOURCES                                                         = \
+    main.c                                                               \
+    $(NULL)
+
 if OPENTHREAD_ENABLE_DIAG
 ot_ncp_LDADD                                                          += \
     $(top_builddir)/src/diag/libopenthread-diag.a                        \
@@ -74,6 +78,22 @@ ot_ncp_LDFLAGS                                                        += \
     -T $(top_srcdir)/examples/platforms/cc2538/cc2538.ld                 \
     $(NULL)
 endif # OPENTHREAD_EXAMPLES_CC2538
+
+if OPENTHREAD_EXAMPLES_CC2650
+ot_ncp_CPPFLAGS                                                       += \
+    -I$(top_srcdir)/third_party/ti/cc26xxware                            \
+    $(NULL)
+
+ot_ncp_LDADD                                                          +=  \
+    $(top_builddir)/examples/platforms/cc2650/libopenthread-cc2650.a      \
+    $(top_srcdir)/third_party/ti/cc26xxware/driverlib/bin/gcc/driverlib.a \
+    $(NULL)
+
+ot_ncp_LDFLAGS                                                        +=   \
+    -T $(top_srcdir)/third_party/ti/cc26xxware/linker_files/cc26x0f128.lds \
+    $(NULL)
+
+endif # OPENTHREAD_EXAMPLES_CC2650
 
 if OPENTHREAD_EXAMPLES_DA15000
 ot_ncp_LDADD                                                          += \

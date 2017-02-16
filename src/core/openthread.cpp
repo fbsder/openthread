@@ -1815,6 +1815,12 @@ uint16_t otCommissionerGetSessionId(otInstance *aInstance)
 {
     return aInstance->mThreadNetif.GetCommissioner().GetSessionId();
 }
+
+ThreadError otCommissionerGeneratePSKc(otInstance *aInstance, const char *aPassPhrase, const char *aNetworkName,
+                                       const uint8_t *aExtPanId, uint8_t *aPSKc)
+{
+    return aInstance->mThreadNetif.GetCommissioner().GeneratePSKc(aPassPhrase, aNetworkName, aExtPanId, aPSKc);
+}
 #endif  // OPENTHREAD_ENABLE_COMMISSIONER
 
 #if OPENTHREAD_ENABLE_JOINER

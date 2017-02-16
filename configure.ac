@@ -877,11 +877,12 @@ AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_RAW_LINK_API],[${OPENTHREAD_ENABLE_RAW_LIN
 
 AC_ARG_WITH(examples,
     [AS_HELP_STRING([--with-examples=TARGET],
-        [Specify the examples from one of: none, posix, cc2538, da15000, samr21 @<:@default=none@:>@.])],
+
+        [Specify the examples from one of: none, posix, cc2538, cc2650, da15000, nrf52840, samr21 @<:@default=none@:>@.])],
     [
         case "${with_examples}" in
 
-        none|posix|cc2538|da15000|nrf52840|samr21)
+        none|posix|cc2538|cc2650|da15000|nrf52840|samr21)
             ;;
         *)
             AC_MSG_ERROR([Invalid value ${with_examples} for --with-examples])
@@ -902,6 +903,11 @@ case ${with_examples} in
     cc2538)
         OPENTHREAD_EXAMPLES_CC2538=1
         AC_DEFINE_UNQUOTED([OPENTHREAD_EXAMPLES_CC2538],[${OPENTHREAD_EXAMPLES_CC2538}],[Define to 1 if you want to use cc2538 examples])
+        ;;
+
+    cc2650)
+        OPENTHREAD_EXAMPLES_CC2650=1
+        AC_DEFINE_UNQUOTED([OPENTHREAD_EXAMPLES_CC2650],[${OPENTHREAD_EXAMPLES_CC2650}],[Define to 1 if you want to use cc2650 examples])
         ;;
 
     da15000)
@@ -932,6 +938,9 @@ AM_CONDITIONAL([OPENTHREAD_EXAMPLES_POSIX], [test "${OPENTHREAD_EXAMPLES}" = "po
 
 AC_SUBST(OPENTHREAD_EXAMPLES_CC2538)
 AM_CONDITIONAL([OPENTHREAD_EXAMPLES_CC2538], [test "${OPENTHREAD_EXAMPLES}" = "cc2538"])
+
+AC_SUBST(OPENTHREAD_EXAMPLES_CC2650)
+AM_CONDITIONAL([OPENTHREAD_EXAMPLES_CC2650], [test "${OPENTHREAD_EXAMPLES}" = "cc2650"])
 
 AC_SUBST(OPENTHREAD_EXAMPLES_DA15000)
 AM_CONDITIONAL([OPENTHREAD_EXAMPLES_DA15000], [test "${OPENTHREAD_EXAMPLES}" = "da15000"])
@@ -1075,6 +1084,7 @@ examples/apps/cli/Makefile
 examples/apps/ncp/Makefile
 examples/platforms/Makefile
 examples/platforms/cc2538/Makefile
+examples/platforms/cc2650/Makefile
 examples/platforms/da15000/Makefile
 examples/platforms/nrf52840/Makefile
 examples/platforms/samr21/Makefile
