@@ -39,6 +39,9 @@
 #include <common/code_utils.hpp>
 #include "platform-samr21.h"
 
+extern uint32_t __flash_data_start;
+extern uint32_t __flash_data_end;
+
 #define FLASH_START_ADDR     ((uint32_t)&__flash_data_start)
 #define FLASH_END_ADDR       ((uint32_t)&__flash_data_end)
 #define NVM_MEMORY        ((volatile uint16_t *)FLASH_ADDR)
@@ -49,11 +52,12 @@
 static uint8_t page_buffer[NVMCTRL_PAGE_SIZE];
 static uint16_t page_size;
 static uint16_t number_of_pages;
+static bool manual_page_write = false;
 
 ThreadError utilsFlashInit(void)
 {
-    assert((FLASH_START_ADDR % NVMCTRL_PAGE_SIZE) == 0);
-    assert((FLASH_END_ADDR % NVMCTRL_PAGE_SIZE) == 0);
+    VerifyOrExit((FLASH_START_ADDR % NVMCTRL_PAGE_SIZE) == 0, ;);
+    VerifyOrExit((FLASH_END_ADDR % NVMCTRL_PAGE_SIZE) == 0, ;);
 
     uint8_t wait_state;
     Nvmctrl * const nvm_module = NVMCTRL;
@@ -71,7 +75,7 @@ ThreadError utilsFlashInit(void)
 
     wait_state = NVMCTRL->CTRLB.bit.RWS;
 
-    nvm_module->CTRLB.reg = NVMCTRL_CTRLB_SLEEPPRM(NVMCTRL_CTRLB_SLEEPPRM_WAKEONACCESS_Val) | ((false & 0x01) << NVMCTRL_CTRLB_MANW_Pos) | NVMCTRL_CTRLB_RWS(wait_state) | ((false & 0x01) << NVMCTRL_CTRLB_CACHEDIS_Pos) | NVMCTRL_CTRLB_READMODE(NVMCTRL_CTRLB_READMODE_NO_MISS_PENALTY_Val);
+    nvm_module->CTRLB.reg = NVMCTRL_CTRLB_SLEEPPRM(NVMCTRL_CTRLB_SLEEPPRM_WAKEONACCESS_Val) | ((manual_page_write & 0x01) << NVMCTRL_CTRLB_MANW_Pos) | NVMCTRL_CTRLB_RWS(wait_state) | ((false & 0x01) << NVMCTRL_CTRLB_CACHEDIS_Pos) | NVMCTRL_CTRLB_READMODE(NVMCTRL_CTRLB_READMODE_NO_MISS_PENALTY_Val);
 
     page_size = (8 << nvm_module->PARAM.bit.PSZ);
     number_of_pages = nvm_module->PARAM.bit.NVMP;
@@ -83,6 +87,9 @@ ThreadError utilsFlashInit(void)
     }
 
     return kThreadError_None;
+
+exit:
+    return kThreadError_Failed;
 }
 
 uint32_t utilsFlashGetSize(void)
@@ -99,7 +106,7 @@ ThreadError utilsFlashErasePage(uint32_t aAddress)
     ThreadError error = kThreadError_None;
 
     flash_offset = (aAddress) & ~(NVMCTRL_ROW_PAGES * page_size - 1);
-    address = FLASH_BASE + aAddress - flash_offset;
+    address = FLASH_START_ADDR + aAddress - flash_offset;
 
     /* Check if the row address is valid */
     if (address > ((uint32_t) page_size * number_of_pages))
@@ -138,8 +145,6 @@ ThreadError utilsFlashErasePage(uint32_t aAddress)
         return kThreadError_Failed;
     }
 
-exit:
-    return error;
 }
 
 ThreadError utilsFlashStatusWait(uint32_t aTimeout)

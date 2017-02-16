@@ -31,6 +31,7 @@ include $(abs_top_nlbuild_autotools_dir)/automake/pre.am
 lib_LIBRARIES                                                                           = libopenthread-samr21.a
 
 libopenthread_samr21_a_CPPFLAGS                                                         = \
+	-D__ATSAMR21G18A__																	  \
     -I$(top_srcdir)/include                                                               \
     -I$(top_srcdir)/examples/platforms                                                    \
     -I$(top_srcdir)/src/core                                                              \
