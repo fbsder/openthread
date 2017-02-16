@@ -47,8 +47,8 @@ void PlatformInit(int argc, char *argv[])
     randomInit();
     otPlatUartEnable();
 
-    (void)argc;
-    (void)argv;
+    (void) argc;
+    (void) argv;
 }
 
 void PlatformProcessDrivers(otInstance *aInstance)

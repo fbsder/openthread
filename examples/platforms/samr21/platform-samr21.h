@@ -38,6 +38,8 @@
 #include <stdint.h>
 #include <openthread-types.h>
 
+#define __ATSAMR21G18A__
+
 #include <samr21.h>
 
 // Global OpenThread instance structure
@@ -102,15 +104,15 @@ int8_t findExternalInterruptMap(uint32_t portpin);
 #define GPIO_DIR_MASK           1
 
 #define GPIO_INT                (1 << 1)
-#define GPIO_INT_ACTIVE_LOW	    (0 << 2)
+#define GPIO_INT_ACTIVE_LOW     (0 << 2)
 #define GPIO_INT_ACTIVE_HIGH    (1 << 2)
 #define GPIO_INT_CLOCK_SYNC     (1 << 3)
 #define GPIO_INT_DEBOUNCE       (1 << 4)
-#define GPIO_INT_LEVEL	        (0 << 5)
+#define GPIO_INT_LEVEL          (0 << 5)
 #define GPIO_INT_EDGE           (1 << 5)
 #define GPIO_INT_DOUBLE_EDGE    (1 << 6)
 
-#define GPIO_POL_POS		    7
+#define GPIO_POL_POS            7
 #define GPIO_POL_NORMAL         (0 << GPIO_POL_POS)
 #define GPIO_POL_INV            (1 << GPIO_POL_POS)
 #define GPIO_POL_MASK           (1 << GPIO_POL_POS)

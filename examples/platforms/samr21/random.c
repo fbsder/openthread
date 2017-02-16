@@ -49,7 +49,7 @@ static tinymt32_t _random;
 
 void randomInit(void)
 {
-	tinymt32_init(&_random, RND_SEED);
+    tinymt32_init(&_random, RND_SEED);
 }
 
 uint32_t otPlatRandomGet(void)
@@ -61,7 +61,7 @@ ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint1
 {
     for (uint16_t length = 0; length < aInputLength; length++)
     {
-        aOutput[length] = (uint8_t)otPlatRandomGet();
+        aOutput[length] = (uint8_t) otPlatRandomGet();
     }
 
     *aOutputLength = aInputLength;

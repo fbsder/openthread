@@ -32,12 +32,12 @@
 
 void otPlatReset(otInstance *aInstance)
 {
-    (void)aInstance;
+    (void) aInstance;
     NVIC_SystemReset();
 }
 
 otPlatResetReason otPlatGetResetReason(otInstance *aInstance)
 {
-    (void)aInstance;
+    (void) aInstance;
     return kPlatResetReason_PowerOn;
 }

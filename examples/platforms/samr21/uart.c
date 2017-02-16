@@ -77,14 +77,16 @@ ThreadError otPlatUartEnable(void)
     sReceive.mTail = 0;
 
     /* calculate baudrate */
-    uint32_t baud = (( (kPlatformClock * 10) / kBaudRate) / 16);
+    uint32_t baud = (((kPlatformClock * 10) / kBaudRate) / 16);
 
-    SercomUsart *uart = (SercomUsart *)SERCOM0;
+    SercomUsart *uart = (SercomUsart *) SERCOM0;
 
     /* enable sync and async clocks */
     PM->APBCMASK.reg |= PM_APBCMASK_SERCOM0;
     GCLK->CLKCTRL.reg = (GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID_SERCOM0_CORE);
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY) {}
+    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
+    {
+    }
 
     /* configure pins */
     setPinFunc(EDBG_COM_TX, FUNCD);
@@ -92,14 +94,13 @@ ThreadError otPlatUartEnable(void)
 
     /* reset the UART device */
     uart->CTRLA.reg = SERCOM_USART_CTRLA_SWRST;
-    while (uart->SYNCBUSY.reg & SERCOM_USART_SYNCBUSY_SWRST) { }
+    while (uart->SYNCBUSY.reg & SERCOM_USART_SYNCBUSY_SWRST)
+    {
+    }
 
     /* set asynchronous mode w/o parity, LSB first, TX and RX pad as specified
      * by the board in the periph_conf.h, x16 sampling and use internal clock */
-    uart->CTRLA.reg = (SERCOM_USART_CTRLA_DORD | SERCOM_USART_CTRLA_SAMPR(0x1)
-            | SERCOM_USART_CTRLA_TXPO(0)
-            | SERCOM_USART_CTRLA_RXPO(1)
-            | SERCOM_USART_CTRLA_MODE_USART_INT_CLK);
+    uart->CTRLA.reg = (SERCOM_USART_CTRLA_DORD | SERCOM_USART_CTRLA_SAMPR(0x1) | SERCOM_USART_CTRLA_TXPO(0) | SERCOM_USART_CTRLA_RXPO(1) | SERCOM_USART_CTRLA_MODE_USART_INT_CLK);
 
     /* set baudrate */
     uart->BAUD.FRAC.FP = (baud % 10);
@@ -169,11 +170,13 @@ void processTransmit(void)
 {
     VerifyOrExit(sTransmitBuffer != NULL, ;);
 
-    SercomUsart *uart = (SercomUsart *)SERCOM0;
+    SercomUsart *uart = (SercomUsart *) SERCOM0;
 
     for (; sTransmitLength > 0; sTransmitLength--)
     {
-        while (!(uart->INTFLAG.reg & SERCOM_USART_INTFLAG_DRE)) {}
+        while (!(uart->INTFLAG.reg & SERCOM_USART_INTFLAG_DRE))
+        {
+        }
 
         uart->DATA.reg = *sTransmitBuffer++;
     }
@@ -196,14 +199,14 @@ void SERCOM0_Handler(void)
     uint32_t intf;
     uint8_t byte;
 
-    SercomUsart *uart = (SercomUsart *)SERCOM0;
+    SercomUsart *uart = (SercomUsart *) SERCOM0;
 
     intf = uart->INTFLAG.reg;
     uart->INTFLAG.reg = intf;
 
-    while ( (uart->INTFLAG.reg & SERCOM_USART_INTFLAG_RXC) )
+    while ((uart->INTFLAG.reg & SERCOM_USART_INTFLAG_RXC))
     {
-        byte = (unsigned char)uart->DATA.reg;
+        byte = (unsigned char) uart->DATA.reg;
 
         // We can only write if incrementing mTail doesn't equal mHead
         if (sReceive.mHead != (sReceive.mTail + 1) % kReceiveBufferSize)

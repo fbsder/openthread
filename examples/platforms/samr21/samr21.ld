@@ -56,6 +56,10 @@ MEMORY
 /* The stack size used by the application. NOTE: you need to adjust according to your application. */
 STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stack_size__ : 0x2000;
 
+/* Be identical to NVMCTRL_PAGE_SIZE defined in the nvmctrl.h */
+FLASH_PAGE_SIZE       = 64;
+FLASH_DATA_PAGES_USED = 256;
+
 /* Section Definitions */
 SECTIONS
 {
@@ -154,4 +158,9 @@ SECTIONS
 
     . = ALIGN(4);
     _end = . ;
+    
+    __flash_data_end = (ORIGIN(rom) + LENGTH(rom));
+    __flash_data_start = (__flash_data_end - (FLASH_PAGE_SIZE * FLASH_DATA_PAGES_USED));
+    /* Assure that code does not overlap flash data area.*/
+    ASSERT((__flash_data_start >= __etext), "Error: Code overlaps flash data area.")
 }

@@ -56,7 +56,7 @@ static bool sIsRunning = false;
 
 void samr21AlarmInit(void)
 {
-	SysTick_Config(kSystemClock / kTicksPerSec);
+    SysTick_Config(kSystemClock / kTicksPerSec);
 }
 
 uint32_t otPlatAlarmGetNow(void)
@@ -66,7 +66,7 @@ uint32_t otPlatAlarmGetNow(void)
 
 void otPlatAlarmStartAt(otInstance *aInstance, uint32_t t0, uint32_t dt)
 {
-    (void)aInstance;
+    (void) aInstance;
     sAlarmT0 = t0;
     sAlarmDt = dt;
     sIsRunning = true;
@@ -74,7 +74,7 @@ void otPlatAlarmStartAt(otInstance *aInstance, uint32_t t0, uint32_t dt)
 
 void otPlatAlarmStop(otInstance *aInstance)
 {
-    (void)aInstance;
+    (void) aInstance;
     sIsRunning = false;
 }
 
