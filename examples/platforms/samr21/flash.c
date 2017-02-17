@@ -211,9 +211,6 @@ exit:
  */
 uint32_t utilsFlashWrite(uint32_t aAddress, uint8_t *aData, uint32_t aSize)
 {
-    int32_t status;
-    uint32_t busy = 1;
-    uint32_t size = 0;
     uint32_t nvm_address;
     uint32_t ctrlb_bak;
 

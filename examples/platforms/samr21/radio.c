@@ -31,23 +31,26 @@
  *   This file implements the OpenThread platform abstraction for radio communication.
  *
  */
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
-#include <openthread-types.h>
 #include <openthread.h>
+#include <openthread-core-config.h>
 #include <openthread-config.h>
+#include <openthread-types.h>
 
 #include <common/code_utils.hpp>
 #include <platform/platform.h>
 #include <common/logging.hpp>
 #include <platform/radio.h>
 #include <platform/diag.h>
+
 #include "platform-samr21.h"
 
-#define RF233IRQPIN     GPIOGROUP(GPIO_PORTB, 0)
-#define RF233RSTPIN     GPIOGROUP(GPIO_PORTB, 15)
-#define RF233SLPPIN     GPIOGROUP(GPIO_PORTA, 20)
-
-#define AT86RF233_PARTNUM (0xB)
+#include "radio_rf233.h"
 
 enum
 {
@@ -80,36 +83,64 @@ static uint8_t sChannel = 0;
 static PhyState sState = kStateDisabled;
 static bool sIsReceiverEnabled = false;
 
-void enableReceiver(void)
+static void enableReceiver(void)
 {
 
 }
 
-void disableReceiver(void)
+static void disableReceiver(void)
 {
 
 }
 
-void setChannel(uint8_t channel)
+static void setChannel(uint8_t channel)
 {
 
 }
 
+/**
+ * Get the factory-assigned IEEE EUI-64 for this interface.
+ *
+ * @param[in]  aInstance   The OpenThread instance structure.
+ * @param[out] aIeeeEui64  A pointer to where the factory-assigned IEEE EUI-64 will be placed.
+ *
+ */
 void otPlatRadioGetIeeeEui64(otInstance *aInstance, uint8_t *aIeeeEui64)
 {
 
 }
 
+/**
+ * Set the PAN ID for address filtering.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ * @param[in] aPanId     The IEEE 802.15.4 PAN ID.
+ *
+ */
 void otPlatRadioSetPanId(otInstance *aInstance, uint16_t panid)
 {
 
 }
 
+/**
+ * Set the Extended Address for address filtering.
+ *
+ * @param[in] aInstance         The OpenThread instance structure.
+ * @param[in] aExtendedAddress  A pointer to the IEEE 802.15.4 Extended Address.
+ *
+ */
 void otPlatRadioSetExtendedAddress(otInstance *aInstance, uint8_t *address)
 {
 
 }
 
+/**
+ * Set the Short Address for address filtering.
+ *
+ * @param[in] aInstance      The OpenThread instance structure.
+ * @param[in] aShortAddress  The IEEE 802.15.4 Short Address.
+ *
+ */
 void otPlatRadioSetShortAddress(otInstance *aInstance, uint16_t address)
 {
 
@@ -125,12 +156,14 @@ void samr21RadioInit(void)
     otLogInfoPlat("Initialized", NULL);
 }
 
-bool otPlatRadioIsEnabled(otInstance *aInstance)
-{
-    (void) aInstance;
-    return (sState != kStateDisabled) ? true : false;
-}
-
+/**
+ * Enable the radio.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ *
+ * @retval ::kThreadError_None     Successfully enabled.
+ * @retval ::kThreadError_Failure  The radio could not be enabled.
+ */
 ThreadError otPlatRadioEnable(otInstance *aInstance)
 {
     if (!otPlatRadioIsEnabled(aInstance))
@@ -142,6 +175,13 @@ ThreadError otPlatRadioEnable(otInstance *aInstance)
     return kThreadError_None;
 }
 
+/**
+ * Disable the radio.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ *
+ * @retval ::kThreadError_None  Successfully transitioned to Disabled.
+ */
 ThreadError otPlatRadioDisable(otInstance *aInstance)
 {
     if (otPlatRadioIsEnabled(aInstance))
@@ -153,6 +193,30 @@ ThreadError otPlatRadioDisable(otInstance *aInstance)
     return kThreadError_None;
 }
 
+/**
+ * Check whether radio is enabled or not.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ *
+ * @retval ::true   radio is enabled.
+ * @retval ::false  radio is disabled.
+ */
+bool otPlatRadioIsEnabled(otInstance *aInstance)
+{
+    (void) aInstance;
+    return (sState != kStateDisabled) ? true : false;
+}
+
+/**
+ * Transition the radio from Receive to Sleep.
+ * Turn off the radio.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ *
+ * @retval ::kThreadError_None         Successfully transitioned to Sleep.
+ * @retval ::kThreadError_Busy         The radio was transmitting
+ * @retval ::kThreadError_InvalidState The radio was disabled
+ */
 ThreadError otPlatRadioSleep(otInstance *aInstance)
 {
     ThreadError error = kThreadError_InvalidState;
@@ -169,6 +233,16 @@ ThreadError otPlatRadioSleep(otInstance *aInstance)
     return error;
 }
 
+/**
+ * Transitioning the radio from Sleep to Receive.
+ * Turn on the radio.
+ *
+ * @param[in]  aInstance  The OpenThread instance structure.
+ * @param[in]  aChannel   The channel to use for receiving.
+ *
+ * @retval ::kThreadError_None         Successfully transitioned to Receive.
+ * @retval ::kThreadError_InvalidState The radio was disabled or transmitting.
+ */
 ThreadError otPlatRadioReceive(otInstance *aInstance, uint8_t aChannel)
 {
     ThreadError error = kThreadError_InvalidState;
@@ -188,29 +262,167 @@ ThreadError otPlatRadioReceive(otInstance *aInstance, uint8_t aChannel)
     return error;
 }
 
-ThreadError otPlatRadioTransmit(otInstance *aInstance, RadioPacket *aPacket)
+/**
+ * Enable/Disable source match for AutoPend.
+ *
+ * @param[in]  aInstance   The OpenThread instance structure.
+ * @param[in]  aEnable     Enable/disable source match for automatical pending.
+ */
+void otPlatRadioEnableSrcMatch(otInstance *aInstance, bool aEnable)
+{
+
+}
+
+/**
+ * Adding short address to the source match table.
+ *
+ * @param[in]  aInstance      The OpenThread instance structure.
+ * @param[in]  aShortAddress  The short address to be added.
+ *
+ * @retval ::kThreadError_None     Successfully added short address to the source match table.
+ * @retval ::kThreadError_NoBufs   No available entry in the source match table.
+ */
+ThreadError otPlatRadioAddSrcMatchShortEntry(otInstance *aInstance, const uint16_t aShortAddress)
 {
     return kThreadError_None;
 }
 
+/**
+ * Adding extended address to the source match table.
+ *
+ * @param[in]  aInstance    The OpenThread instance structure.
+ * @param[in]  aExtAddress  The extended address to be added.
+ *
+ * @retval ::kThreadError_None     Successfully added extended address to the source match table.
+ * @retval ::kThreadError_NoBufs   No available entry in the source match table.
+ */
+ThreadError otPlatRadioAddSrcMatchExtEntry(otInstance *aInstance, const uint8_t *aExtAddress)
+{
+    return kThreadError_None;
+}
+
+/**
+ * Removing short address to the source match table.
+ *
+ * @param[in]  aInstance      The OpenThread instance structure.
+ * @param[in]  aShortAddress  The short address to be removed.
+ *
+ * @retval ::kThreadError_None        Successfully removed short address from the source match table.
+ * @retval ::kThreadError_NoAddress   The short address is not in source match table.
+ */
+ThreadError otPlatRadioClearSrcMatchShortEntry(otInstance *aInstance, const uint16_t aShortAddress)
+{
+    return kThreadError_None;
+}
+
+/**
+ * Removing extended address to the source match table of the radio.
+ *
+ * @param[in]  aInstance    The OpenThread instance structure.
+ * @param[in]  aExtAddress  The extended address to be removed.
+ *
+ * @retval ::kThreadError_None        Successfully removed the extended address from the source match table.
+ * @retval ::kThreadError_NoAddress   The extended address is not in source match table.
+ */
+ThreadError otPlatRadioClearSrcMatchExtEntry(otInstance *aInstance, const uint8_t *aExtAddress)
+{
+    return kThreadError_None;
+}
+
+/**
+ * Removing all the short addresses from the source match table.
+ *
+ * @param[in]  aInstance   The OpenThread instance structure.
+ *
+ */
+void otPlatRadioClearSrcMatchShortEntries(otInstance *aInstance)
+{
+
+}
+
+/**
+ * Removing all the extended addresses from the source match table.
+ *
+ * @param[in]  aInstance   The OpenThread instance structure.
+ *
+ */
+void otPlatRadioClearSrcMatchExtEntries(otInstance *aInstance)
+{
+
+}
+
+/**
+ * The radio transitions from Transmit to Receive.
+ * This method returns a pointer to the transmit buffer.
+ *
+ * The caller forms the IEEE 802.15.4 frame in this buffer then calls otPlatRadioTransmit() to request transmission.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ *
+ * @returns A pointer to the transmit buffer.
+ *
+ */
 RadioPacket *otPlatRadioGetTransmitBuffer(otInstance *aInstance)
 {
     (void) aInstance;
     return &sTransmitFrame;
 }
 
+/**
+ * This method begins the transmit sequence on the radio.
+ *
+ * The caller must form the IEEE 802.15.4 frame in the buffer provided by otPlatRadioGetTransmitBuffer() before
+ * requesting transmission.  The channel and transmit power are also included in the RadioPacket structure.
+ *
+ * The transmit sequence consists of:
+ * 1. Transitioning the radio to Transmit from Receive.
+ * 2. Transmits the psdu on the given channel and at the given transmit power.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ * @param[in] aPacket    A pointer to the packet that will be transmitted.
+ *
+ * @retval ::kThreadError_None         Successfully transitioned to Transmit.
+ * @retval ::kThreadError_InvalidState The radio was not in the Receive state.
+ */
+ThreadError otPlatRadioTransmit(otInstance *aInstance, RadioPacket *aPacket)
+{
+    return kThreadError_None;
+}
+
+/**
+ * Get the most recent RSSI measurement.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ *
+ * @returns The RSSI in dBm when it is valid.  127 when RSSI is invalid.
+ */
 int8_t otPlatRadioGetRssi(otInstance *aInstance)
 {
     (void) aInstance;
     return 0;
 }
 
+/**
+ * Get the radio capabilities.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ *
+ * @returns The radio capability bit vector. The stack enables or disables some functions based on this value.
+ */
 otRadioCaps otPlatRadioGetCaps(otInstance *aInstance)
 {
     (void) aInstance;
     return kRadioCapsNone;
 }
 
+/**
+ * Get the status of promiscuous mode.
+ *
+ * @param[in] aInstance  The OpenThread instance structure.
+ *
+ * @retval true   Promiscuous mode is enabled.
+ * @retval false  Promiscuous mode is disabled.
+ */
 bool otPlatRadioGetPromiscuous(otInstance *aInstance)
 {
     (void) aInstance;
@@ -218,6 +430,12 @@ bool otPlatRadioGetPromiscuous(otInstance *aInstance)
     return false;
 }
 
+/**
+ * Enable or disable promiscuous mode.
+ *
+ * @param[in]  aInstance The OpenThread instance structure.
+ * @param[in]  aEnable   A value to enable or disable promiscuous mode.
+ */
 void otPlatRadioSetPromiscuous(otInstance *aInstance, bool aEnable)
 {
     (void) aInstance;
@@ -226,7 +444,25 @@ void otPlatRadioSetPromiscuous(otInstance *aInstance, bool aEnable)
 
 }
 
-void readFrame(void)
+/**
+ * This method begins the energy scan sequence on the radio.
+ *
+ * @param[in] aInstance      The OpenThread instance structure.
+ * @param[in] aScanChannel   The channel to perform the energy scan on.
+ * @param[in] aScanDuration  The duration, in milliseconds, for the channel to be scanned.
+ *
+ * @retval ::kThreadError_None            Successfully started scanning the channel.
+ * @retval ::kThreadError_NotImplemented  The radio doesn't support energy scanning.
+ */
+ThreadError otPlatRadioEnergyScan(otInstance *aInstance, uint8_t aScanChannel, uint16_t aScanDuration)
+{
+    (void) aInstance;
+    (void) aScanChannel;
+    (void) aScanDuration;
+    return kThreadError_NotImplemented;
+}
+
+static void readFrame(void)
 {
     uint8_t length;
     uint8_t crcCorr;
@@ -299,82 +535,3 @@ void samr21RadioProcess(otInstance *aInstance)
     sReceiveFrame.mLength = 0;
 }
 
-void RFCoreRxTxIntHandler(void)
-{
-
-}
-
-void RFCoreErrIntHandler(void)
-{
-
-}
-
-uint32_t getSrcMatchEntriesEnableStatus(bool aShort)
-{
-    uint32_t status = 0;
-
-    return status;
-}
-
-int8_t findSrcMatchShortEntry(const uint16_t aShortAddress)
-{
-    return 0;
-}
-
-int8_t findSrcMatchExtEntry(const uint8_t *aExtAddress)
-{
-    return 0;
-}
-
-void setSrcMatchEntryEnableStatus(bool aShort, uint8_t aEntry, bool aEnable)
-{
-
-}
-
-int8_t findSrcMatchAvailEntry(bool aShort)
-{
-    return 0;
-}
-
-void otPlatRadioEnableSrcMatch(otInstance *aInstance, bool aEnable)
-{
-
-}
-
-ThreadError otPlatRadioAddSrcMatchShortEntry(otInstance *aInstance, const uint16_t aShortAddress)
-{
-    return kThreadError_None;
-}
-
-ThreadError otPlatRadioAddSrcMatchExtEntry(otInstance *aInstance, const uint8_t *aExtAddress)
-{
-    return kThreadError_None;
-}
-
-ThreadError otPlatRadioClearSrcMatchShortEntry(otInstance *aInstance, const uint16_t aShortAddress)
-{
-    return kThreadError_None;
-}
-
-ThreadError otPlatRadioClearSrcMatchExtEntry(otInstance *aInstance, const uint8_t *aExtAddress)
-{
-    return kThreadError_None;
-}
-
-void otPlatRadioClearSrcMatchShortEntries(otInstance *aInstance)
-{
-
-}
-
-void otPlatRadioClearSrcMatchExtEntries(otInstance *aInstance)
-{
-
-}
-
-ThreadError otPlatRadioEnergyScan(otInstance *aInstance, uint8_t aScanChannel, uint16_t aScanDuration)
-{
-    (void) aInstance;
-    (void) aScanChannel;
-    (void) aScanDuration;
-    return kThreadError_NotImplemented;
-}
