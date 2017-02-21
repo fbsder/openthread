@@ -77,6 +77,12 @@ set -x
     git checkout -- . || die
     git clean -xfd || die
     ./bootstrap || die
+    ONLY_MTD=1 make -f examples/Makefile-cc2650 || die
+    arm-none-eabi-size  output/bin/arm-none-eabi-ot-cli-mtd || die
+	
+    git checkout -- . || die
+    git clean -xfd || die
+    ./bootstrap || die
     COMMISSIONER=1 JOINER=1 DHCP6_CLIENT=1 DHCP6_SERVER=1 make -f examples/Makefile-samr21 || die
     arm-none-eabi-size  output/bin/arm-none-eabi-ot-cli-ftd || die
     arm-none-eabi-size  output/bin/arm-none-eabi-ot-cli-mtd || die
@@ -113,10 +119,8 @@ set -x
     git checkout -- . || die
     git clean -xfd || die
     ./bootstrap || die
-    make -f examples/Makefile-cc2650 || die
-    arm-none-eabi-size  output/bin/arm-none-eabi-ot-cli-ftd || die
+    ONLY_MTD=1 make -f examples/Makefile-cc2650 || die
     arm-none-eabi-size  output/bin/arm-none-eabi-ot-cli-mtd || die
-    arm-none-eabi-size  output/bin/arm-none-eabi-ot-ncp || die
 
     git checkout -- . || die
     git clean -xfd || die
