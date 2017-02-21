@@ -14,4 +14,12 @@
 
 #define AT86RF233_PARTNUM (0xB)
 
+
+/* AUTOACK should be enabled by default, disable it only for testing */
+#define AT86RF233_AUTOACK_ENABLED       (true)
+
+#define AT86RF233_FCS_LENGTH        (2)
+#define AT86RF233_PSDU_LENGTH       (125)
+#define AT86RF233_WAKEUP_DELAY      (1000)
+
 #endif

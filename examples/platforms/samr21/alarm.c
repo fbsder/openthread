@@ -46,7 +46,7 @@
 enum
 {
     kSystemClock = 48000000,  ///< MHz
-    kTicksPerSec = 1000,      ///< Ticks per second
+    kTicksPerSec = 1000000,      ///< Ticks per second
 };
 
 static uint32_t sCounter = 0;

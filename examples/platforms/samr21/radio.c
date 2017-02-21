@@ -50,7 +50,17 @@
 
 #include "platform-samr21.h"
 
+#include "spi.h"
+#include "gpio.h"
 #include "radio_rf233.h"
+#include "radio_rf233_regs.h"
+
+#define HARDCODED_NODE_ID               (1)
+#define RADIO_CSMA_CA_MAX_BO            (4)
+#define RADIO_CSMA_CA_MIN_BE            (3)
+#define RADIO_CSMA_CA_MAX_BE            (5)
+
+enum {LOW = 0, HIGH = 1};
 
 enum
 {
@@ -74,28 +84,264 @@ enum
 static RadioPacket sTransmitFrame;
 static RadioPacket sReceiveFrame;
 static ThreadError sTransmitError;
-static ThreadError sReceiveError;
 
 static uint8_t sTransmitPsdu[IEEE802154_MAX_LENGTH];
 static uint8_t sReceivePsdu[IEEE802154_MAX_LENGTH];
-static uint8_t sChannel = 0;
+static uint8_t cmd_buf[12];
+
+static uint8_t mac_addr[8] = {
+    0xFC, 0xC2, 0x3D,       /* factory eui , see http://standards-oui.ieee.org/oui/oui.txt */
+    0x00,                   /* board type */
+    ((HARDCODED_NODE_ID >> 24) & 0xff), ((HARDCODED_NODE_ID >> 16) & 0xff),
+    ((HARDCODED_NODE_ID >>  8) & 0xff), (HARDCODED_NODE_ID        & 0xff),
+};
 
 static PhyState sState = kStateDisabled;
-static bool sIsReceiverEnabled = false;
+
+static void waitUs(uint32_t us)
+{
+    /* 1000000 ticks per second */
+    uint32_t from = otPlatAlarmGetNow();
+    uint32_t end = from + us;
+
+    if (end > from)
+    {
+        while (end <= otPlatAlarmGetNow())
+        {
+        }
+    }
+    else /* end < from: Rounding */
+    {
+        while ((otPlatAlarmGetNow() > from) || (otPlatAlarmGetNow() <= end))
+        {
+        }
+    }
+}
+
+static inline void set_reset(uint32_t value)
+{
+    samr21GpioWrite(RF233RSTPIN, value);
+}
+
+static uint8_t at86rf233_read_reg(uint8_t addr)
+{
+    uint8_t len = 2;
+
+    cmd_buf[0] = RF_CMD_REG_R | addr;
+
+    if (samr21SpiTransceive(cmd_buf, len - 1, cmd_buf, len) == 0) {
+        return cmd_buf[len - 1];
+    }
+
+    return 0;
+}
+
+static bool at86rf233_write_reg(uint8_t addr, uint8_t value)
+{
+    uint8_t len = 2;
+
+    cmd_buf[0] = RF_CMD_REG_W | addr;
+    cmd_buf[1] = value;
+
+    return (samr21SpiTransceive(cmd_buf, len, NULL, 0) == 0);
+}
+
+bool at86rf233_sram_write_raw_frame(uint8_t *data, uint8_t len)
+{
+    uint8_t cmd[3 + AT86RF233_PSDU_LENGTH];
+
+    if (len > AT86RF233_PSDU_LENGTH)
+    {
+        return false;
+    }
+
+    cmd[0] = RF_CMD_SRAM_W;
+    cmd[1] = 0x0;
+    cmd[2] = len;
+    memcpy(&cmd[3], data, len);
+
+    return (samr21SpiTransceive(cmd, (3 + len), NULL, 0) == 0);
+}
+
+bool at86rf233_sram_read(uint8_t offset, uint8_t *data, uint8_t len)
+{
+    uint8_t rx_buf[2 + AT86RF233_PSDU_LENGTH];
+
+    if (len > AT86RF233_PSDU_LENGTH) {
+        return false;
+    }
+
+    cmd_buf[0] = RF_CMD_SRAM_R;
+    cmd_buf[1] = offset;
+
+    samr21SpiTransceive(cmd_buf, 2, rx_buf, len + 2);
+
+    memcpy(data, &rx_buf[2], len);
+
+    return true;
+}
+
+static uint8_t at86rf233_status(void)
+{
+    return (at86rf233_read_reg(TRX_STATUS_REG) & TRX_STATUS_MASK);
+}
+
+static void at86rf233_reset_state_machine(void)
+{
+    uint8_t old_state;
+
+    /* Wait for any state transitions to complete before forcing TRX_OFF */
+    do {
+        old_state = at86rf233_status();
+    } while (old_state == TRX_STATUS_STATE_TRANSITION);
+
+    at86rf233_write_reg(TRX_STATE_REG, TRX_CMD_FORCE_TRX_OFF);
+}
 
 static void enableReceiver(void)
 {
-
+    at86rf233_reset_state_machine();
+    samr21GpioWrite(RF233SLPPIN, LOW);
+    waitUs(AT86RF233_WAKEUP_DELAY);
 }
 
 static void disableReceiver(void)
 {
+    at86rf233_reset_state_machine();
+    samr21GpioWrite(RF233SLPPIN, HIGH);
+}
+static inline void configure_gpios(void)
+{
 
+    samr21GpioConfig(RF233IRQPIN, GPIO_DIR_IN | GPIO_INT | GPIO_INT_EDGE | GPIO_PUD_PULL_DOWN | GPIO_INT_ACTIVE_HIGH);
+
+    /* setup gpio for the sleep & reset */
+    samr21GpioConfig(RF233RSTPIN, GPIO_DIR_OUT);
+    samr21GpioWrite(RF233RSTPIN, LOW);
+
+    samr21GpioConfig(RF233SLPPIN, GPIO_DIR_OUT);
+    samr21GpioWrite(RF233SLPPIN, LOW);
+}
+
+static inline void configure_spi(void)
+{
+
+    samr21SpiConfigure(SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_TRANSFER_MSB);
+}
+
+static void at86rf233_set_csma_backoff_exp(uint8_t min, uint8_t max)
+{
+    max = (max > 8) ? 8 : max;
+    min = (min > max) ? max : min;
+
+    at86rf233_write_reg(CSMA_BE_REG, (max << 4) | (min));
+}
+
+static void at86rf233_set_frame_max_retries(int8_t retries)
+{
+
+    retries = (retries > 7) ? 7 : retries; /* valid values: 0-7 */
+    retries = (retries < 0) ? 7 : retries;
+
+    uint8_t tmp = at86rf233_read_reg(XAH_CTRL_0_REG);
+    tmp &= ~(0xf << 4);
+    tmp |= (retries << 4);
+    at86rf233_write_reg(XAH_CTRL_0_REG, tmp);
+}
+
+static void at86rf233_set_csma_max_retries(int8_t retries)
+{
+
+    retries = (retries > 5) ? 5 : retries; /* valid values: 0-5 */
+    retries = (retries < 0) ? 7 : retries; /* max < 0 => disable CSMA (set to 7) */
+
+    uint8_t tmp = at86rf233_read_reg(XAH_CTRL_0_REG);
+    tmp &= ~(7u << 1);
+    tmp |= (retries << 1);
+    at86rf233_write_reg(XAH_CTRL_0_REG, tmp);
+}
+
+static void at86rf233_set_csma_seed(uint8_t entropy[2])
+{
+
+    if (entropy == NULL) {
+        return;
+    }
+
+    at86rf233_write_reg(CSMA_SEED_0_REG, entropy[0]);
+
+    uint8_t tmp = at86rf233_read_reg(CSMA_SEED_1_REG);
+    tmp &= ~0x7;
+    tmp |= entropy[1] & 0x7;
+    at86rf233_write_reg(CSMA_SEED_1_REG, tmp);
+}
+
+static ThreadError power_on_and_setup(void)
+{
+    uint8_t tmp;
+
+    set_reset(LOW);
+    waitUs(1000);
+    set_reset(HIGH);
+    waitUs(100);
+
+    /* test if the SPI is set up correctly and the device is responding */
+    if (at86rf233_read_reg(PART_NUM_REG) != AT86RF233_PARTNUM)
+    {
+        SYS_LOG_ERR("unable to read correct part number");
+        return kThreadError_Failed;
+    }
+
+    at86rf233_reset_state_machine();
+
+    /* auto ack */
+    tmp = at86rf233_read_reg(CSMA_SEED_1_REG);
+    tmp &= ~(1U << AACK_DIS_ACK);
+    at86rf233_write_reg(CSMA_SEED_1_REG, tmp);
+
+    /* csma */
+    at86rf233_set_csma_seed(mac_addr);
+    at86rf233_set_csma_max_retries(RADIO_CSMA_CA_MAX_BO);
+    at86rf233_set_csma_backoff_exp(RADIO_CSMA_CA_MIN_BE, RADIO_CSMA_CA_MAX_BE);
+
+    at86rf233_set_frame_max_retries(3);
+
+    at86rf233_write_reg(TRX_RPC_REG, 0xff);
+
+    /* switch on RX/TX end interrupt, disable others */
+    at86rf233_write_reg(IRQ_MASK_REG, (1u << TRX_END));
+
+    /* enable safe mode (protect RX FIFO until reading data starts) */
+    at86rf233_write_reg(TRX_CTRL_2_REG, ((1u << RX_SAFE_MODE) | (0u << OQPSK_SCRAM_EN) | (0u << OQPSK_DATA_RATE)));
+
+    /* don't populate masked interrupt flags to IRQ_STATUS register */
+    at86rf233_write_reg(TRX_CTRL_1_REG, ((1u << SPI_CMD_MODE) | (1u << TX_AUTO_CRC_ON) | (0u << IRQ_MASK_MODE) | (0u << IRQ_POLARITY)));
+
+    /* disable clock output to save power */
+    at86rf233_write_reg(TRX_CTRL_0_REG, 0x0);
+
+    /* clear interrupt flags */
+    at86rf233_read_reg(IRQ_STATUS_REG);
+
+    /* go into RX state */
+    at86rf233_write_reg(TRX_STATE_REG, TRX_CMD_RX_AACK_ON);
+
+    return kThreadError_None;
 }
 
 static void setChannel(uint8_t channel)
 {
+    uint8_t cc;
 
+    if (channel < 11 || channel > 26)
+    {
+        return;
+    }
+
+    cc = at86rf233_read_reg(PHY_CC_CCA_REG);
+    cc &= ~(0x1F);
+    cc |= channel;
+    at86rf233_write_reg(PHY_CC_CCA_REG, cc);
 }
 
 /**
@@ -107,7 +353,9 @@ static void setChannel(uint8_t channel)
  */
 void otPlatRadioGetIeeeEui64(otInstance *aInstance, uint8_t *aIeeeEui64)
 {
+    (void)aInstance;
 
+    memcpy(aIeeeEui64, mac_addr, sizeof(mac_addr) / sizeof(mac_addr[0]));
 }
 
 /**
@@ -119,7 +367,12 @@ void otPlatRadioGetIeeeEui64(otInstance *aInstance, uint8_t *aIeeeEui64)
  */
 void otPlatRadioSetPanId(otInstance *aInstance, uint16_t panid)
 {
+    (void)aInstance;
 
+    uint8_t *p = (uint8_t *)&panid;
+
+    at86rf233_write_reg(PAN_ID_0_REG, p[0]);
+    at86rf233_write_reg(PAN_ID_1_REG, p[1]);
 }
 
 /**
@@ -131,7 +384,12 @@ void otPlatRadioSetPanId(otInstance *aInstance, uint16_t panid)
  */
 void otPlatRadioSetExtendedAddress(otInstance *aInstance, uint8_t *address)
 {
+    (void)aInstance;
 
+    for (int i = 0; i < 8; i++)
+    {
+        at86rf233_write_reg(IEEE_ADDR_0_REG + i, address[i]);
+    }
 }
 
 /**
@@ -143,7 +401,12 @@ void otPlatRadioSetExtendedAddress(otInstance *aInstance, uint8_t *address)
  */
 void otPlatRadioSetShortAddress(otInstance *aInstance, uint16_t address)
 {
+    (void)aInstance;
 
+    uint8_t *p = (uint8_t *)&address;
+
+    at86rf233_write_reg(SHORT_ADDR_0_REG, p[0]);
+    at86rf233_write_reg(SHORT_ADDR_1_REG, p[1]);
 }
 
 void samr21RadioInit(void)
@@ -152,6 +415,15 @@ void samr21RadioInit(void)
     sTransmitFrame.mPsdu = sTransmitPsdu;
     sReceiveFrame.mLength = 0;
     sReceiveFrame.mPsdu = sReceivePsdu;
+
+
+    configure_gpios();
+    configure_spi();
+
+
+    if (power_on_and_setup() != kThreadError_None) {
+        return;
+    }
 
     otLogInfoPlat("Initialized", NULL);
 }
