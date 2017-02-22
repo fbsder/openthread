@@ -45,6 +45,7 @@
 #include <common/code_utils.hpp>
 #include <platform/platform.h>
 #include <common/logging.hpp>
+#include <platform/alarm.h>
 #include <platform/radio.h>
 #include <platform/diag.h>
 
@@ -129,7 +130,8 @@ static uint8_t at86rf233_read_reg(uint8_t addr)
 
     cmd_buf[0] = RF_CMD_REG_R | addr;
 
-    if (samr21SpiTransceive(cmd_buf, len - 1, cmd_buf, len) == 0) {
+    if (samr21SpiTransceive(cmd_buf, len - 1, cmd_buf, len) == 0)
+    {
         return cmd_buf[len - 1];
     }
 
@@ -167,7 +169,8 @@ bool at86rf233_sram_read(uint8_t offset, uint8_t *data, uint8_t len)
 {
     uint8_t rx_buf[2 + AT86RF233_PSDU_LENGTH];
 
-    if (len > AT86RF233_PSDU_LENGTH) {
+    if (len > AT86RF233_PSDU_LENGTH)
+    {
         return false;
     }
 
@@ -191,7 +194,8 @@ static void at86rf233_reset_state_machine(void)
     uint8_t old_state;
 
     /* Wait for any state transitions to complete before forcing TRX_OFF */
-    do {
+    do
+    {
         old_state = at86rf233_status();
     } while (old_state == TRX_STATUS_STATE_TRANSITION);
 
@@ -210,6 +214,7 @@ static void disableReceiver(void)
     at86rf233_reset_state_machine();
     samr21GpioWrite(RF233SLPPIN, HIGH);
 }
+
 static inline void configure_gpios(void)
 {
 
@@ -264,7 +269,8 @@ static void at86rf233_set_csma_max_retries(int8_t retries)
 static void at86rf233_set_csma_seed(uint8_t entropy[2])
 {
 
-    if (entropy == NULL) {
+    if (entropy == NULL)
+    {
         return;
     }
 
@@ -288,7 +294,6 @@ static ThreadError power_on_and_setup(void)
     /* test if the SPI is set up correctly and the device is responding */
     if (at86rf233_read_reg(PART_NUM_REG) != AT86RF233_PARTNUM)
     {
-        SYS_LOG_ERR("unable to read correct part number");
         return kThreadError_Failed;
     }
 
@@ -416,12 +421,11 @@ void samr21RadioInit(void)
     sReceiveFrame.mLength = 0;
     sReceiveFrame.mPsdu = sReceivePsdu;
 
-
     configure_gpios();
     configure_spi();
 
-
-    if (power_on_and_setup() != kThreadError_None) {
+    if (power_on_and_setup() != kThreadError_None)
+    {
         return;
     }
 
