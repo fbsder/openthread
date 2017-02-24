@@ -472,10 +472,7 @@ ThreadError Mle::BecomeChild(otMleAttachFilter aFilter)
         mLastPartitionRouterIdSequence = mNetif.GetMle().GetRouterIdSequence();
     }
 
-    if ((mDeviceMode & ModeTlv::kModeRxOnWhenIdle) == 0)
-    {
-        mNetif.GetMeshForwarder().SetRxOnWhenIdle(true);
-    }
+    mNetif.GetMeshForwarder().SetRxOnWhenIdle(true);
 
     mParentRequestTimer.Start(kParentRequestRouterTimeout);
 
@@ -512,7 +509,7 @@ ThreadError Mle::SetStateDetached(void)
     mDeviceState = kDeviceStateDetached;
     mParentRequestState = kParentIdle;
     mParentRequestTimer.Stop();
-    mNetif.GetMeshForwarder().SetRxOnWhenIdle(true);
+    mNetif.GetMeshForwarder().SetRxOnWhenIdle(false);
     mNetif.GetMle().HandleDetachStart();
     mNetif.GetIp6().SetForwardingEnabled(false);
     mNetif.GetIp6().mMpl.SetTimerExpirations(0);
@@ -2842,12 +2839,12 @@ ThreadError Mle::HandleChildUpdateRequest(const Message &aMessage, const Ip6::Me
         tlvs[numTlvs++] = Tlv::kLinkFrameCounter;
     }
 
+    SuccessOrExit(error = SendChildUpdateResponse(tlvs, numTlvs, challenge));
+
     if (mRetrieveNewNetworkData)
     {
-        SendDataRequest(aMessageInfo.GetPeerAddr(), dataRequestTlvs, sizeof(tlvs), 0);
+        SendDataRequest(aMessageInfo.GetPeerAddr(), dataRequestTlvs, sizeof(dataRequestTlvs), 0);
     }
-
-    SuccessOrExit(error = SendChildUpdateResponse(tlvs, numTlvs, challenge));
 
 exit:
     return error;

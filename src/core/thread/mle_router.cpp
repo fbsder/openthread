@@ -222,6 +222,7 @@ ThreadError MleRouter::BecomeRouter(ThreadStatusTlv::Status aStatus)
 
     mAdvertiseTimer.Stop();
     mNetif.GetAddressResolver().Clear();
+    mNetif.GetMeshForwarder().SetRxOnWhenIdle(true);
     mRouterSelectionJitterTimeout = 0;
 
     switch (mDeviceState)
@@ -712,11 +713,19 @@ ThreadError MleRouter::HandleLinkRequest(const Message &aMessage, const Ip6::Mes
                 VerifyOrExit(memcmp(&neighbor->mMacAddr, &macAddr, sizeof(neighbor->mMacAddr)) == 0, ;);
             }
         }
+        else
+        {
+            // source is not a router
+            neighbor = NULL;
+        }
     }
     else
     {
         // lack of source address indicates router coming out of reset
-        VerifyOrExit((neighbor = GetNeighbor(macAddr)) != NULL, error = kThreadError_Drop);
+        VerifyOrExit((neighbor = GetNeighbor(macAddr)) != NULL &&
+                     neighbor->mState == Neighbor::kStateValid &&
+                     IsActiveRouter(neighbor->mValid.mRloc16),
+                     error = kThreadError_Drop);
     }
 
     // TLV Request
@@ -1377,7 +1386,7 @@ ThreadError MleRouter::HandleAdvertisement(const Message &aMessage, const Ip6::M
 
             if (mParent.mValid.mRloc16 != sourceAddress.GetRloc16())
             {
-                SetStateDetached();
+                BecomeDetached();
                 ExitNow(error = kThreadError_NoRoute);
             }
 
@@ -1730,8 +1739,7 @@ void MleRouter::HandleStateUpdateTimer(void)
         break;
 
     case kDeviceStateDetached:
-        SetStateDetached();
-        BecomeChild(kMleAttachAnyPartition);
+        BecomeDetached();
         ExitNow();
 
     case kDeviceStateChild:
@@ -3387,6 +3395,7 @@ ThreadError MleRouter::RestoreChildren(void)
                        (childInfo.mFullFunction ? ModeTlv::kModeFFD : 0) |
                        (childInfo.mFullNetworkData ? ModeTlv::kModeFullNetworkData : 0);
         child->mState = Neighbor::kStateRestored;
+        child->mAddSrcMatchEntryShort = true;
         child->mLastHeard = Timer::GetNow();
     }
 
