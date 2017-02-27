@@ -83,7 +83,7 @@ set -x
     make -f examples/Makefile-cc2650 || die
     arm-none-eabi-size  output/bin/arm-none-eabi-ot-cli-mtd || die
     arm-none-eabi-size  output/bin/arm-none-eabi-ot-ncp-mtd || die
-	
+
     git checkout -- . || die
     git clean -xfd || die
     ./bootstrap || die
