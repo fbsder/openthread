@@ -167,10 +167,6 @@ ot_ncp_mtd_LDFLAGS                                                     = \
 ot_ncp_mtd_SOURCES                                                     = \
     $(SOURCES_COMMON)                                                    \
     $(NULL)
-<<<<<<< HEAD
->>>>>>> upstream/master
-=======
->>>>>>> 65cd9978f10e51d4c62b501d492840f5bdab96c8
 
 if OPENTHREAD_BUILD_COVERAGE
 CLEANFILES                                                             = $(wildcard *.gcda *.gcno)
