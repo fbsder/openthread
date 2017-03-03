@@ -36,7 +36,7 @@
 #define PLATFORM_SAMR21_H_
 
 #include <stdint.h>
-#include <openthread-types.h>
+#include <openthread/types.h>
 
 #ifndef __ATSAMR21G18A__
 #define __ATSAMR21G18A__

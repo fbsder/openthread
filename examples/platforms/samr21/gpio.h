@@ -3,7 +3,7 @@
 #define SAMR21_GPIO_H_
 
 #include <stdint.h>
-#include <openthread-types.h>
+#include <openthread/types.h>
 
 ThreadError samr21GpioConfig(uint32_t portpin, int flags);
 void samr21GpioWrite(uint32_t portpin, uint32_t value);

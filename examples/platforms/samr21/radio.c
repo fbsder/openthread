@@ -37,17 +37,16 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <openthread.h>
+#include <openthread/openthread.h>
 #include <openthread-core-config.h>
 #include <openthread-config.h>
-#include <openthread-types.h>
+#include <openthread/types.h>
 
 #include <common/code_utils.hpp>
-#include <platform/platform.h>
 #include <common/logging.hpp>
-#include <platform/alarm.h>
-#include <platform/radio.h>
-#include <platform/diag.h>
+#include <openthread/platform/alarm.h>
+#include <openthread/platform/radio.h>
+#include <openthread/platform/diag.h>
 
 #include "platform-samr21.h"
 

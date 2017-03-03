@@ -32,7 +32,7 @@
  *   This file includes the platform-specific initializers.
  */
 
-#include <platform/uart.h>
+#include <openthread/platform/uart.h>
 #include "platform-samr21.h"
 
 #include <openthread-core-config.h>

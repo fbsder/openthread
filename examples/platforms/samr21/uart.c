@@ -34,9 +34,9 @@
 
 #include <stddef.h>
 
-#include <openthread-types.h>
+#include <openthread/types.h>
 #include <common/code_utils.hpp>
-#include <platform/uart.h>
+#include <openthread/platform/uart.h>
 #include "platform-samr21.h"
 
 #define EDBG_COM_TX GPIOGROUP(GPIO_PORTA, 4)

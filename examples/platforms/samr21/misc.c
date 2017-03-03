@@ -26,7 +26,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <platform/misc.h>
+#include <openthread/platform/misc.h>
 
 #include "platform-samr21.h"
 

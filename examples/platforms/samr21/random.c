@@ -33,11 +33,10 @@
  */
 
 #include <stdint.h>
-#include <openthread-types.h>
+#include <openthread/types.h>
 
 #include <common/code_utils.hpp>
-#include <platform/radio.h>
-#include <platform/random.h>
+#include <openthread/platform/random.h>
 
 #include "tinymt32/tinymt32.h"
 

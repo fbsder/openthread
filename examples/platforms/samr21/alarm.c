@@ -39,8 +39,8 @@
 #include <openthread.h>
 
 #include <platform/platform.h>
-#include <platform/alarm.h>
-#include <platform/diag.h>
+#include <openthread/platform/alarm.h>
+#include <openthread/platform/diag.h>
 #include "platform-samr21.h"
 
 enum
