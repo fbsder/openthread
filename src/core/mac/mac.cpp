@@ -639,8 +639,10 @@ void Mac::SendBeaconRequest(Frame &aFrame)
 void Mac::SendBeacon(Frame &aFrame)
 {
     uint8_t numUnsecurePorts;
-    Beacon *beacon;
+    uint8_t beaconLength;
     uint16_t fcf;
+    Beacon *beacon = NULL;
+    BeaconPayload *beaconPayload = NULL;
 
     // initialize MAC header
     fcf = Frame::kFcfFrameBeacon | Frame::kFcfDstAddrNone | Frame::kFcfSrcAddrExt;
@@ -651,30 +653,35 @@ void Mac::SendBeacon(Frame &aFrame)
     // write payload
     beacon = reinterpret_cast<Beacon *>(aFrame.GetPayload());
     beacon->Init();
+    beaconLength = sizeof(*beacon);
 
-    // set the Joining Permitted flag
-    mNetif.GetIp6Filter().GetUnsecurePorts(numUnsecurePorts);
+    beaconPayload = reinterpret_cast<BeaconPayload *>(beacon->GetPayload());
 
-    if (numUnsecurePorts)
+    if (mNetif.GetKeyManager().GetSecurityPolicyFlags() & OT_SECURITY_POLICY_BEACONS)
     {
-        beacon->SetJoiningPermitted();
-    }
-    else
-    {
-        beacon->ClearJoiningPermitted();
+        beaconPayload->Init();
+
+        // set the Joining Permitted flag
+        mNetif.GetIp6Filter().GetUnsecurePorts(numUnsecurePorts);
+
+        if (numUnsecurePorts)
+        {
+            beaconPayload->SetJoiningPermitted();
+        }
+        else
+        {
+            beaconPayload->ClearJoiningPermitted();
+        }
+
+        beaconPayload->SetNetworkName(mNetworkName.m8);
+        beaconPayload->SetExtendedPanId(mExtendedPanId.m8);
+
+        beaconLength += sizeof(*beaconPayload);
     }
 
-    beacon->SetNetworkName(mNetworkName.m8);
-    beacon->SetExtendedPanId(mExtendedPanId.m8);
-
-    aFrame.SetPayloadLength(sizeof(*beacon));
+    aFrame.SetPayloadLength(beaconLength);
 
     otLogDebgMac(GetInstance(), "Sent Beacon");
-}
-
-void Mac::HandleBeginTransmit(void *aContext)
-{
-    static_cast<Mac *>(aContext)->HandleBeginTransmit();
 }
 
 void Mac::ProcessTransmitSecurity(Frame &aFrame)
@@ -763,6 +770,11 @@ exit:
     return;
 }
 
+void Mac::HandleBeginTransmit(void *aContext)
+{
+    static_cast<Mac *>(aContext)->HandleBeginTransmit();
+}
+
 void Mac::HandleBeginTransmit(void)
 {
     Frame &sendFrame(*mTxFrame);
@@ -779,12 +791,14 @@ void Mac::HandleBeginTransmit(void)
             sendFrame.SetChannel(mScanChannel);
             SendBeaconRequest(sendFrame);
             sendFrame.SetSequence(0);
+            sendFrame.SetMaxTxAttempts(kDirectFrameMacTxAttempts);
             break;
 
         case kStateTransmitBeacon:
             sendFrame.SetChannel(mChannel);
             SendBeacon(sendFrame);
             sendFrame.SetSequence(mBeaconSequence++);
+            sendFrame.SetMaxTxAttempts(kIndirectFrameMacTxAttempts);
             break;
 
         case kStateTransmitData:
@@ -1015,12 +1029,16 @@ void Mac::SentFrame(ThreadError aError)
     switch (aError)
     {
     case kThreadError_None:
-    case kThreadError_ChannelAccessFailure:
-    case kThreadError_Abort:
         break;
 
+    case kThreadError_ChannelAccessFailure:
+    case kThreadError_Abort:
+        otLogInfoMac(GetInstance(), "Tx failed with error %s (%d)", otThreadErrorToString(aError), aError);
+
+    // Intentional fall through to next case.
+
     case kThreadError_NoAck:
-        otDumpDebgMac("NO ACK", sendFrame.GetHeader(), 16);
+        otDumpDebgMac("TX ERR", sendFrame.GetHeader(), 16);
 
         if (!RadioSupportsRetries() &&
             mTransmitAttempts < sendFrame.GetMaxTxAttempts())
