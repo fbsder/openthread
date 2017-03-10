@@ -192,7 +192,7 @@ void MeshForwarder::ClearChildIndirectMessages(Child &aChild)
 
         message->ClearChildMask(mNetif.GetMle().GetChildIndex(aChild));
 
-        if (!message->IsChildPending())
+        if (!message->IsChildPending() && !message->GetDirectTransmission())
         {
             if (mSendMessage == message)
             {
@@ -2193,7 +2193,7 @@ void MeshForwarder::HandleDataRequest(const Mac::Address &aMacSource, const Thre
     mScheduleTransmissionTask.Post();
 
 exit:
-    {}
+    return;
 }
 
 void MeshForwarder::HandleDataPollTimeout(void *aContext)
