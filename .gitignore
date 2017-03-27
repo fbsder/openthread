@@ -17,6 +17,7 @@
 .local-version
 .cproject
 .project
+.vagrant
 aclocal.m4
 autom4te.cache
 build
