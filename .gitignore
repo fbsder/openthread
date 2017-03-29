@@ -4,6 +4,8 @@
 *.gcno
 *.log
 *.o
+*.lo
+*.la
 *.opendb
 *.orig
 *.pyc
@@ -17,6 +19,7 @@
 .local-version
 .cproject
 .project
+.libs
 .vagrant
 aclocal.m4
 autom4te.cache
