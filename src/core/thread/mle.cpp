@@ -304,7 +304,23 @@ ThreadError Mle::Restore(void)
     {
         mNetif.GetMle().SetRouterId(GetRouterId(GetRloc16()));
         mNetif.GetMle().SetPreviousPartitionId(networkInfo.mPreviousPartitionId);
-        mNetif.GetMle().RestoreChildren();
+
+        switch (mNetif.GetMle().RestoreChildren())
+        {
+        // If there are more saved children in non-volatile settings
+        // than could be restored or the values in the settings are
+        // invalid, erase all the children info in the settings and
+        // refresh the info to ensure that the non-volatile settings
+        // stay in sync with the child table.
+
+        case kThreadError_Failed:
+        case kThreadError_NoBufs:
+            mNetif.GetMle().RefreshStoredChildren();
+            break;
+
+        default:
+            break;
+        }
     }
 
 exit:
@@ -594,6 +610,8 @@ ThreadError Mle::SetTimeout(uint32_t aTimeout)
     }
 
     mTimeout = aTimeout;
+
+    mNetif.GetMeshForwarder().GetDataPollManager().HandleTimeoutChanged();
 
     if (mDeviceState == kDeviceStateChild)
     {
@@ -1574,7 +1592,7 @@ ThreadError Mle::SendChildIdRequest(void)
 
     if ((mDeviceMode & ModeTlv::kModeRxOnWhenIdle) == 0)
     {
-        mNetif.GetMeshForwarder().SetPollPeriod(kAttachDataPollPeriod);
+        mNetif.GetMeshForwarder().GetDataPollManager().SetAttachMode(true);
         mNetif.GetMeshForwarder().SetRxOnWhenIdle(false);
     }
 
@@ -1699,7 +1717,7 @@ ThreadError Mle::SendChildUpdateRequest(void)
 
     if ((mDeviceMode & ModeTlv::kModeRxOnWhenIdle) == 0)
     {
-        mNetif.GetMeshForwarder().SetPollPeriod(kAttachDataPollPeriod);
+        mNetif.GetMeshForwarder().GetDataPollManager().SetAttachMode(true);
         mNetif.GetMeshForwarder().SetRxOnWhenIdle(false);
     }
     else
@@ -2748,7 +2766,7 @@ ThreadError Mle::HandleChildIdResponse(const Message &aMessage, const Ip6::Messa
 
     if ((mDeviceMode & ModeTlv::kModeRxOnWhenIdle) == 0)
     {
-        mNetif.GetMeshForwarder().SetPollPeriod(Timer::SecToMsec(mTimeout / kMaxChildKeepAliveAttempts));
+        mNetif.GetMeshForwarder().GetDataPollManager().SetAttachMode(false);
         mNetif.GetMeshForwarder().SetRxOnWhenIdle(false);
     }
     else
@@ -2942,7 +2960,7 @@ ThreadError Mle::HandleChildUpdateResponse(const Message &aMessage, const Ip6::M
 
         if ((mDeviceMode & ModeTlv::kModeRxOnWhenIdle) == 0)
         {
-            mNetif.GetMeshForwarder().SetPollPeriod(Timer::SecToMsec(mTimeout / kMaxChildKeepAliveAttempts));
+            mNetif.GetMeshForwarder().GetDataPollManager().SetAttachMode(false);
             mNetif.GetMeshForwarder().SetRxOnWhenIdle(false);
             mParentRequestTimer.Stop();
         }
