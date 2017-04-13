@@ -41,28 +41,48 @@
  *
  */
 
+/* Entry Point */
+ENTRY(Reset_Handler)
 
 OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
-/* Memory Spaces Definitions */
+/* Specify the memory areas */
 MEMORY
 {
-  rom      (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00040000
-  ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00008000
+  m_interrupts          (RX)  : ORIGIN = 0x00000000, LENGTH = 0x00000200
+  m_flash_config        (RX)  : ORIGIN = 0x00000400, LENGTH = 0x00000010
+  m_text                (RX)  : ORIGIN = 0x00000410, LENGTH = 0x0003FBF0
+  m_data                (RW)  : ORIGIN = 0x1FFFC000, LENGTH = 0x00010000
 }
 
 /* The stack size used by the application. NOTE: you need to adjust according to your application. */
 STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stack_size__ : 0x2000;
 
-/* Be identical to NVMCTRL_PAGE_SIZE defined in the nvmctrl.h */
-FLASH_PAGE_SIZE       = 64;
-FLASH_DATA_PAGES_USED = 256;
+/* Be identical to FSL_FEATURE_FLASH_PFLASH_BLOCK_SECTOR_SIZE defined in the MKW41Z4_features.h */
+FLASH_PAGE_SIZE       = 2048;
+FLASH_DATA_PAGES_USED = 8;
 
 /* Section Definitions */
 SECTIONS
 {
+      /* The startup code goes first into internal flash */
+    .interrupts :
+    {
+      __VECTOR_TABLE = .;
+      . = ALIGN(4);
+      KEEP(*(.isr_vector))     /* Startup code */
+      . = ALIGN(4);
+    } > m_interrupts
+
+    .flash_config :
+    {
+      . = ALIGN(4);
+      KEEP(*(.FlashConfig))    /* Flash Configuration Field (FCF) */
+      . = ALIGN(4);
+    } > m_flash_config
+
     .text :
     {
         . = ALIGN(4);
@@ -110,14 +130,14 @@ SECTIONS
 
         . = ALIGN(4);
         _efixed = .;            /* End of text section */
-    } > rom
+    } > m_text
 
     /* .ARM.exidx is sorted, so has to go in its own output section.  */
     PROVIDE_HIDDEN (__exidx_start = .);
     .ARM.exidx :
     {
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } > rom
+    } > m_text
     PROVIDE_HIDDEN (__exidx_end = .);
 
     . = ALIGN(4);
@@ -131,7 +151,7 @@ SECTIONS
         *(.data .data.*);
         . = ALIGN(4);
         _erelocate = .;
-    } > ram
+    } > m_data
 
     /* .bss section which is used for uninitialized data */
     .bss (NOLOAD) :
@@ -144,7 +164,7 @@ SECTIONS
         . = ALIGN(4);
         _ebss = . ;
         _ezero = .;
-    } > ram
+    } > m_data
 
     /* stack section */
     .stack (NOLOAD):
@@ -154,12 +174,12 @@ SECTIONS
         . = . + STACK_SIZE;
         . = ALIGN(8);
         _estack = .;
-    } > ram
+    } > m_data
 
     . = ALIGN(4);
     _end = . ;
     
-    __flash_data_end = (ORIGIN(rom) + LENGTH(rom));
+    __flash_data_end = (ORIGIN(m_text) + LENGTH(m_text));
     __flash_data_start = (__flash_data_end - (FLASH_PAGE_SIZE * FLASH_DATA_PAGES_USED));
     /* Assure that code does not overlap flash data area.*/
     ASSERT((__flash_data_start >= _etext), "Error: Code overlaps flash data area.")

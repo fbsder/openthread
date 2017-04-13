@@ -46,8 +46,8 @@ configure_OPTIONS               = \
     --enable-cli                  \
     --enable-ncp                  \
     --enable-default-logging      \
-    --with-examples=kw41z        \
-    --with-platform-info=KW41Z   \
+    --with-examples=kw41z         \
+    --with-platform-info=KW41Z    \
     $(NULL)
 
 ifeq ($(DEFAULT_LOGGING),1)

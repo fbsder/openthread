@@ -31,9 +31,14 @@ include $(abs_top_nlbuild_autotools_dir)/automake/pre.am
 lib_LIBRARIES                                                                           = libopenthread-kw41z.a
 
 libopenthread_kw41z _a_CPPFLAGS                                                         = \
+	-DCPU_MKW41Z512VHT4                                                                   \
     -I$(top_srcdir)/include                                                               \
     -I$(top_srcdir)/examples/platforms                                                    \
     -I$(top_srcdir)/src/core                                                              \
+    -I$(top_srcdir)/third_party/nxp/CMSIS                                                 \
+    -I$(top_srcdir)/third_party/nxp/drivers                                               \
+    -I$(top_srcdir)/third_party/nxp/kw41z                                                 \
+    -I$(top_srcdir)/third_party/nxp/utilities                                             \
     -Wno-unknown-pragmas                                                                  \
     -Wno-sign-compare                                                                     \
     -Wno-unused-function                                                                  \
@@ -56,6 +61,13 @@ libopenthread_kw41z _a_SOURCES                                                  
     startup-gcc.c                                                                         \
     uart.c                                                                                \
     gpio.c                                                                                \
+    @top_builddir@/third_party/nxp/kw41z/startup_MKW41Z4.S                                \
+    @top_builddir@/third_party/nxp/kw41z/system_MKW41Z4.c                                 \
+    @top_builddir@/third_party/nxp/drivers/fsl_common.c                                   \
+    @top_builddir@/third_party/nxp/drivers/fsl_trng.c                                     \
+    @top_builddir@/third_party/nxp/drivers/fsl_sim.c                                      \
+    @top_builddir@/third_party/nxp/drivers/fsl_flash.c                                    \
+    @top_builddir@/third_party/nxp/drivers/fsl_clock.c                                    \
     $(NULL)
     
 if OPENTHREAD_ENABLE_DIAG

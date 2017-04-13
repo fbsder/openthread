@@ -38,6 +38,8 @@
 #include <stdint.h>
 #include <openthread/types.h>
 
+#include <fsl_device_registers.h>
+
 // Global OpenThread instance structure
 extern otInstance *sInstance;
 

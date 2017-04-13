@@ -44,10 +44,7 @@ extern uint32_t __flash_data_end;
 
 #define FLASH_START_ADDR    ((uint32_t)&__flash_data_start)
 #define FLASH_END_ADDR      ((uint32_t)&__flash_data_end)
-#define NVM_MEMORY        	((volatile uint16_t *)FLASH_ADDR)
-#define NVM_ERRORS_MASK   	(NVMCTRL_STATUS_PROGE   | \
-                           	   NVMCTRL_STATUS_LOCKE | \
-							   NVMCTRL_STATUS_NVME)
+#define NVM_MEMORY        	((volatile uint16_t *)FSL_FEATURE_FLASH_PFLASH_START_ADDRESS)
 
 static uint16_t page_size;
 static uint16_t number_of_pages;
