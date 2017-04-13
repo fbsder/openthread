@@ -51,7 +51,7 @@ libopenthread_kw41z _a_CPPFLAGS                                                 
     -Wno-pedantic                                                                         \
     $(NULL)
 
-libopenthread_kw41z _a_SOURCES                                                          = \
+libopenthread_kw41z_a_SOURCES                                                           = \
     alarm.c                                                                               \
     flash.c                                                                               \
     misc.c                                                                                \
