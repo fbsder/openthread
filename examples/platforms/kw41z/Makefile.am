@@ -30,8 +30,8 @@ include $(abs_top_nlbuild_autotools_dir)/automake/pre.am
 
 lib_LIBRARIES                                                                           = libopenthread-kw41z.a
 
-libopenthread_kw41z _a_CPPFLAGS                                                         = \
-	-DCPU_MKW41Z512VHT4                                                                   \
+libopenthread_kw41z_a_CPPFLAGS                                                          = \
+    -DCPU_MKW41Z512VHT4                                                                   \
     -I$(top_srcdir)/include                                                               \
     -I$(top_srcdir)/examples/platforms                                                    \
     -I$(top_srcdir)/src/core                                                              \

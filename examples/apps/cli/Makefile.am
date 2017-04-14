@@ -122,6 +122,16 @@ LDFLAGS_COMMON                                                        += \
     $(NULL)
 endif # OPENTHREAD_EXAMPLES_SAMR21
 
+if OPENTHREAD_EXAMPLES_KW41Z
+LDADD_COMMON                                                          += \
+    $(top_builddir)/examples/platforms/kw41z/libopenthread-kw41z.a       \
+    $(NULL)
+
+LDFLAGS_COMMON                                                        += \
+    -T $(top_srcdir)/examples/platforms/kw41z/kw41z.ld                   \
+    $(NULL)
+endif # OPENTHREAD_EXAMPLES_KW41Z
+
 if OPENTHREAD_ENABLE_FTD
 bin_PROGRAMS                                                          += \
     ot-cli-ftd                                                           \
