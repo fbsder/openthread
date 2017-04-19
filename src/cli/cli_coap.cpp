@@ -260,7 +260,7 @@ exit:
 ThreadError Coap::ProcessClient(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
-    otMessage *message = otCoapNewMessage(sInstance, NULL);
+    otMessage *message = NULL;
     otMessageInfo messageInfo;
     otCoapHeader header;
 
@@ -335,7 +335,7 @@ ThreadError Coap::ProcessClient(int argc, char *argv[])
     // Embed content into message if given
     if (argc > 4)
     {
-        SuccessOrExit(error = otMessageAppend(message, &argv[4], sizeof(argv[4])));
+        SuccessOrExit(error = otMessageAppend(message, argv[4], static_cast<uint16_t>(strlen(argv[4]))));
     }
 
     memset(&messageInfo, 0, sizeof(messageInfo));
