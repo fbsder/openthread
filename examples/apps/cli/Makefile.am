@@ -132,17 +132,18 @@ LDFLAGS_COMMON                                                        += \
     $(NULL)
 endif # OPENTHREAD_EXAMPLES_KW41Z
 
-if OPENTHREAD_ENABLE_FTD
+if OPENTHREAD_ENABLE_CLI_FTD
 bin_PROGRAMS                                                          += \
     ot-cli-ftd                                                           \
     $(NULL)
+endif
 
 ot_cli_ftd_CPPFLAGS                                                    = \
     $(CPPFLAGS_COMMON)                                                   \
     $(NULL)
 
 ot_cli_ftd_LDADD                                                       = \
-    $(top_builddir)/src/cli/libopenthread-cli.a                          \
+    $(top_builddir)/src/cli/libopenthread-cli-ftd.a                      \
     $(top_builddir)/src/core/libopenthread-ftd.a                         \
     $(LDADD_COMMON)                                                      \
     $(NULL)
@@ -154,18 +155,19 @@ ot_cli_ftd_LDFLAGS                                                     = \
 ot_cli_ftd_SOURCES                                                     = \
     $(SOURCES_COMMON)                                                    \
     $(NULL)
-endif # OPENTHREAD_ENABLE_FTD
 
+if OPENTHREAD_ENABLE_CLI_MTD
 bin_PROGRAMS                                                          += \
     ot-cli-mtd                                                           \
     $(NULL)
+endif
 
 ot_cli_mtd_CPPFLAGS                                                    = \
     $(CPPFLAGS_COMMON)                                                   \
     $(NULL)
 
 ot_cli_mtd_LDADD                                                       = \
-    $(top_builddir)/src/cli/libopenthread-cli.a                          \
+    $(top_builddir)/src/cli/libopenthread-cli-mtd.a                      \
     $(top_builddir)/src/core/libopenthread-mtd.a                         \
     $(LDADD_COMMON)                                                      \
     $(NULL)

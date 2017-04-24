@@ -188,7 +188,7 @@ exit:
 
 ThreadError DatasetManager::Clear(uint8_t &aFlags, bool aOnlyClearNetwork)
 {
-    if (!aOnlyClearNetwork && mLocal.Compare(mNetwork) == 0)
+    if (!aOnlyClearNetwork)
     {
         mLocal.Clear(true);
     }
@@ -585,7 +585,7 @@ ThreadError DatasetManager::SendSetRequest(const otOperationalDataset &aDataset,
     VerifyOrExit((message = NewMeshCoPMessage(mNetif.GetCoapClient(), header)) != NULL,
                  error = kThreadError_NoBufs);
 
-#if OPENTHREAD_ENABLE_COMMISSIONER
+#if OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
     bool isCommissioner;
 
     isCommissioner = mNetif.GetCommissioner().GetState() != kCommissionerStateDisabled ? true : false;
@@ -618,7 +618,7 @@ ThreadError DatasetManager::SendSetRequest(const otOperationalDataset &aDataset,
         }
     }
 
-#endif
+#endif // OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
 
     if (aDataset.mIsActiveTimestampSet)
     {

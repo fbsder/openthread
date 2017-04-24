@@ -90,7 +90,7 @@ const struct Command Interpreter::sCommands[] =
 #if OPENTHREAD_ENABLE_APPLICATION_COAP
     { "coap", &Interpreter::ProcessCoap },
 #endif
-#if OPENTHREAD_ENABLE_COMMISSIONER
+#if OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
     { "commissioner", &Interpreter::ProcessCommissioner },
 #endif
     { "contextreusedelay", &Interpreter::ProcessContextIdReuseDelay },
@@ -457,7 +457,7 @@ void Interpreter::ProcessChannel(int argc, char *argv[])
     else
     {
         SuccessOrExit(error = ParseLong(argv[0], value));
-        otLinkSetChannel(mInstance, static_cast<uint8_t>(value));
+        error = otLinkSetChannel(mInstance, static_cast<uint8_t>(value));
     }
 
 exit:
@@ -900,7 +900,7 @@ void Interpreter::ProcessExtAddress(int argc, char *argv[])
 
         VerifyOrExit(Hex2Bin(argv[0], extAddress.m8, sizeof(otExtAddress)) >= 0, error = kThreadError_Parse);
 
-        otLinkSetExtendedAddress(mInstance, &extAddress);
+        error = otLinkSetExtendedAddress(mInstance, &extAddress);
     }
 
 exit:
@@ -932,7 +932,7 @@ void Interpreter::ProcessExtPanId(int argc, char *argv[])
 
         VerifyOrExit(Hex2Bin(argv[0], extPanId, sizeof(extPanId)) >= 0, error = kThreadError_Parse);
 
-        otThreadSetExtendedPanId(mInstance, extPanId);
+        error = otThreadSetExtendedPanId(mInstance, extPanId);
     }
 
 exit:
@@ -1437,7 +1437,7 @@ void Interpreter::ProcessPanId(int argc, char *argv[])
     else
     {
         SuccessOrExit(error = ParseLong(argv[0], value));
-        otLinkSetPanId(mInstance, static_cast<otPanId>(value));
+        error = otLinkSetPanId(mInstance, static_cast<otPanId>(value));
     }
 
 exit:
@@ -2420,7 +2420,7 @@ void Interpreter::ProcessVersion(int argc, char *argv[])
     (void)argv;
 }
 
-#if OPENTHREAD_ENABLE_COMMISSIONER
+#if OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
 
 void Interpreter::ProcessCommissioner(int argc, char *argv[])
 {
@@ -2704,7 +2704,7 @@ void Interpreter::HandlePanIdConflict(uint16_t aPanId, uint32_t aChannelMask)
     sServer->OutputFormat("Conflict: %04x, %08x\r\n", aPanId, aChannelMask);
 }
 
-#endif  // OPENTHREAD_ENABLE_COMMISSIONER
+#endif //  OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
 
 #if OPENTHREAD_ENABLE_JOINER
 
