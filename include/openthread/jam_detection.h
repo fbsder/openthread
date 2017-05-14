@@ -29,7 +29,7 @@
 /**
  * @file
  * @brief
- *   This file includes the OenThread API for jam detection feature.
+ *   This file includes the OpenThread API for jam detection feature.
  */
 
 #ifndef OPENTHREAD_JAM_DETECTION_H_
@@ -41,7 +41,7 @@
 #include <openthread-config.h>
 #endif
 
-#include "openthread/types.h"
+#include <openthread/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +50,7 @@ extern "C" {
 #if OPENTHREAD_ENABLE_JAM_DETECTION
 
 /**
- * @addtogroup jam-det  Jamming Detection
+ * @addtogroup api-jam-detection
  *
  * @brief
  *   This module includes functions for signal jamming detection feature.

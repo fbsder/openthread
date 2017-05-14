@@ -34,13 +34,13 @@
  *   This implementation is not a true random number generator and does @em satisfy the Thread requirements.
  */
 
-#include "openthread/platform/random.h"
-#include "platform-da15000.h"
-#include "sdk_defs.h"
-#include "hw_trng.h"
 #include <string.h>
 
+#include <openthread/platform/random.h>
 
+#include "platform-da15000.h"
+#include "hw_trng.h"
+#include "sdk_defs.h"
 
 #define HW_TRNG_RAM             (0x40040000)
 
@@ -93,15 +93,13 @@ uint32_t otPlatRandomGet(void)
     return mlcg;
 }
 
-ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
+ThreadError otPlatRandomGetTrue(uint8_t *aOutput, uint16_t aOutputLength)
 {
 
-    for (uint16_t length = 0; length < aInputLength; length++)
+    for (uint16_t length = 0; length < aOutputLength; length++)
     {
         aOutput[length] = (uint8_t)otPlatRandomGet();
     }
-
-    *aOutputLength = aInputLength;
 
     return kThreadError_None;
 }

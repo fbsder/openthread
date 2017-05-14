@@ -31,15 +31,22 @@
  *   This file implements the CoAP header generation and parsing.
  */
 
-#include "openthread/platform/random.h"
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
 
-#include <coap/coap_header.hpp>
-#include <coap/coap_client.hpp>
-#include <common/debug.hpp>
-#include <common/code_utils.hpp>
-#include <common/encoding.hpp>
+#include "coap_header.hpp"
 
-namespace Thread {
+#include <openthread/platform/random.h>
+
+#include "coap/coap.hpp"
+#include "common/code_utils.hpp"
+#include "common/debug.hpp"
+#include "common/encoding.hpp"
+
+namespace ot {
 namespace Coap {
 
 void Header::Init(void)
@@ -96,6 +103,10 @@ ThreadError Header::FromMessage(const Message &aMessage, uint16_t aMetadataSize)
         if (mHeader.mBytes[mHeaderLength] == 0xff)
         {
             mHeaderLength += sizeof(uint8_t);
+            length -= sizeof(uint8_t);
+            // RFC7252: The presence of a marker followed by a zero-length payload MUST be processed
+            // as a message format error.
+            VerifyOrExit(length > 0, error = kThreadError_Parse);
             ExitNow(error = kThreadError_None);
         }
 
@@ -257,23 +268,28 @@ exit:
     return error;
 }
 
-ThreadError Header::AppendObserveOption(uint32_t aObserve)
+ThreadError Header::AppendUintOption(uint16_t aNumber, uint32_t aValue)
 {
     Option coapOption;
 
-    aObserve = Encoding::BigEndian::HostSwap32(aObserve & 0xFFFFFF);
-    coapOption.mNumber = kCoapOptionObserve;
+    aValue = Encoding::BigEndian::HostSwap32(aValue);
+    coapOption.mNumber = aNumber;
     coapOption.mLength = 4;
-    coapOption.mValue = reinterpret_cast<uint8_t *>(&aObserve);
+    coapOption.mValue = reinterpret_cast<uint8_t *>(&aValue);
 
-    // skip preceding zeros, but make sure mLength is at least 1
-    while (coapOption.mValue[0] == 0 && coapOption.mLength > 1)
+    // skip preceding zeros
+    while (coapOption.mValue[0] == 0 && coapOption.mLength > 0)
     {
         coapOption.mValue++;
         coapOption.mLength--;
     }
 
     return AppendOption(coapOption);
+}
+
+ThreadError Header::AppendObserveOption(uint32_t aObserve)
+{
+    return AppendUintOption(kCoapOptionObserve, aObserve & 0xFFFFFF);
 }
 
 ThreadError Header::AppendUriPathOptions(const char *aUriPath)
@@ -303,33 +319,12 @@ exit:
 
 ThreadError Header::AppendContentFormatOption(MediaType aType)
 {
-    Option coapOption;
-    uint8_t type = static_cast<uint8_t>(aType);
-
-    coapOption.mNumber = kCoapOptionContentFormat;
-    coapOption.mLength = 1;
-    coapOption.mValue = &type;
-
-    return AppendOption(coapOption);
+    return AppendUintOption(kCoapOptionContentFormat, aType);
 }
 
 ThreadError Header::AppendMaxAgeOption(uint32_t aMaxAge)
 {
-    Option coapOption;
-
-    aMaxAge = Encoding::BigEndian::HostSwap32(aMaxAge);
-    coapOption.mNumber = kCoapOptionMaxAge;
-    coapOption.mLength = 4;
-    coapOption.mValue = reinterpret_cast<uint8_t *>(&aMaxAge);
-
-    // skip preceding zeros, but make sure mLength is at least 1
-    while (coapOption.mValue[0] == 0 && coapOption.mLength > 1)
-    {
-        coapOption.mValue++;
-        coapOption.mLength--;
-    }
-
-    return AppendOption(coapOption);
+    return AppendUintOption(kCoapOptionMaxAge, aMaxAge);
 }
 
 ThreadError Header::AppendUriQueryOption(const char *aUriQuery)
@@ -453,4 +448,4 @@ void Header::SetDefaultResponseHeader(const Header &aRequestHeader)
 }
 
 }  // namespace Coap
-}  // namespace Thread
+}  // namespace ot

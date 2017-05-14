@@ -34,9 +34,9 @@
 #ifndef NETWORK_DATA_LOCAL_HPP_
 #define NETWORK_DATA_LOCAL_HPP_
 
-#include <thread/network_data.hpp>
+#include "thread/network_data.hpp"
 
-namespace Thread {
+namespace ot {
 
 class ThreadNetif;
 
@@ -59,11 +59,12 @@ public:
 
     void GetNetworkData(bool, uint8_t *, uint8_t &aDataLength) { aDataLength = 0; }
     ThreadError GetNextOnMeshPrefix(otNetworkDataIterator *, otBorderRouterConfig *) { return kThreadError_NotFound; }
+    ThreadError GetNextExternalRoute(otNetworkDataIterator *, otExternalRouteConfig *) { return kThreadError_NotFound; }
     void ClearResubmitDelayTimer(void) { }
 
 };
 
 }  // namespace NetworkData
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NETWORK_DATA_LOCAL_HPP_

@@ -35,11 +35,15 @@
 #ifndef MESHCOP_TIMESTAMP_HPP_
 #define MESHCOP_TIMESTAMP_HPP_
 
-#include <common/encoding.hpp>
+#include <string.h>
 
-using Thread::Encoding::BigEndian::HostSwap16;
+#include <openthread/platform/toolchain.h>
 
-namespace Thread {
+#include "common/encoding.hpp"
+
+using ot::Encoding::BigEndian::HostSwap16;
+
+namespace ot {
 namespace MeshCoP {
 
 /**
@@ -147,6 +151,6 @@ private:
 } OT_TOOL_PACKED_END;
 
 }  // namespace MeshCoP
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // MESHCOP_TIMESTAMP_HPP_

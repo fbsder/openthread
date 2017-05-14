@@ -34,15 +34,15 @@
 #ifndef NETWORK_DATA_HPP_
 #define NETWORK_DATA_HPP_
 
-#include "openthread/types.h"
+#include <openthread/types.h>
 
-#include <coap/coap_client.hpp>
-#include <net/udp6.hpp>
-#include <thread/lowpan.hpp>
-#include <thread/mle_router.hpp>
-#include <thread/network_data_tlvs.hpp>
+#include "coap/coap.hpp"
+#include "net/udp6.hpp"
+#include "thread/lowpan.hpp"
+#include "thread/mle_router.hpp"
+#include "thread/network_data_tlvs.hpp"
 
-namespace Thread {
+namespace ot {
 
 /**
  * @addtogroup core-netdata
@@ -61,7 +61,7 @@ namespace Thread {
  */
 
 /**
- * @namespace Thread::NetworkData
+ * @namespace ot::NetworkData
  *
  * @brief
  *   This namespace includes definitions for managing Thread Network Data.
@@ -373,6 +373,6 @@ private:
  * @}
  */
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NETWORK_DATA_HPP_

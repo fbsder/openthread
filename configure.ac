@@ -175,6 +175,7 @@ then
     # being performed later in the configuration process.
     ac_cv_func_strlcat=${ac_cv_func_strlcat-no}
     ac_cv_func_strlcpy=${ac_cv_func_strlcpy-no}
+    ac_cv_func_strnlen=${ac_cv_func_strnlen-no}
 else
     AC_MSG_RESULT([no])
 fi
@@ -536,6 +537,70 @@ AC_MSG_RESULT(${enable_builtin_mbedtls})
 AM_CONDITIONAL([OPENTHREAD_ENABLE_BUILTIN_MBEDTLS], [test "${enable_builtin_mbedtls}" = "yes"])
 
 #
+# Thread Border Agent Proxy
+#
+
+AC_MSG_CHECKING([whether to enable border router proxy])
+AC_ARG_ENABLE(border_agent_proxy,
+    [AS_HELP_STRING([--enable-border-agent-proxy],[Enable border agent proxy support @<:@default=no@:>@.])],
+    [
+        case "${enableval}" in
+
+        no|yes)
+            enable_border_agent_proxy=${enableval}
+            ;;
+
+        *)
+            AC_MSG_ERROR([Invalid value ${enable_border_agent_proxy} for --enable-border-agent-proxy])
+            ;;
+        esac
+    ],
+    [enable_border_agent_proxy=no])
+
+if test "$enable_border_agent_proxy" = "yes"; then
+    OPENTHREAD_ENABLE_BORDER_AGENT_PROXY=1
+else
+    OPENTHREAD_ENABLE_BORDER_AGENT_PROXY=0
+fi
+
+AC_MSG_RESULT(${enable_border_agent_proxy})
+AC_SUBST(OPENTHREAD_ENABLE_BORDER_AGENT_PROXY)
+AM_CONDITIONAL([OPENTHREAD_ENABLE_BORDER_AGENT_PROXY], [test "${enable_border_agent_proxy}" = "yes"])
+AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_BORDER_AGENT_PROXY],[${OPENTHREAD_ENABLE_BORDER_AGENT_PROXY}],[Define to 1 to enable the border agent proxy feature.])
+
+#
+# Thread Network Diagnostic for MTD
+#
+
+AC_ARG_ENABLE(mtd_network_diagnostic,
+    [AS_HELP_STRING([--enable-mtd-network-diagnostic],[Enable network diagnostic support for MTD @<:@default=no@:>@.])],
+    [
+        case "${enableval}" in
+
+        no|yes)
+            enable_mtd_network_diagnostic=${enableval}
+            ;;
+
+        *)
+            AC_MSG_ERROR([Invalid value ${enable_mtd_network_diagnostic} for --enable-mtd-network-diagnostic])
+            ;;
+        esac
+    ],
+    [enable_mtd_network_diagnostic=no])
+
+if test "$enable_mtd_network_diagnostic" = "yes"; then
+    OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC=1
+else
+    OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC=0
+fi
+
+AC_MSG_CHECKING([whether to enable the network diagnostic for MTD])
+AC_MSG_RESULT(${enable_mtd_network_diagnostic})
+AC_SUBST(OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC)
+AM_CONDITIONAL([OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC], [test "${enable_mtd_network_diagnostic}" = "yes"])
+AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC],[${OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC}],[Define to 1 to enable network diagnostic for MTD.])
+
+#
 # Thread Commissioner
 #
 
@@ -740,6 +805,37 @@ AC_MSG_RESULT(${enable_legacy})
 AC_SUBST(OPENTHREAD_ENABLE_LEGACY)
 AM_CONDITIONAL([OPENTHREAD_ENABLE_LEGACY], [test "${enable_legacy}" = "yes"])
 AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_LEGACY],[${OPENTHREAD_ENABLE_LEGACY}],[Define to 1 if you want to use legacy network support])
+
+#
+# Child Supervision
+#
+
+AC_ARG_ENABLE(child_supervision,
+    [AS_HELP_STRING([--enable-child-supervision],[Enable child supervision feature @<:@default=no@:>@.])],
+    [
+        case "${enableval}" in
+
+        no|yes)
+            enable_child_supervision=${enableval}
+            ;;
+
+        *)
+            AC_MSG_ERROR([Invalid value ${enable_child_supervision} for --enable-child-supervision])
+            ;;
+        esac
+    ],
+    [enable_child_supervision=no])
+
+if test "$enable_child_supervision" = "yes"; then
+    OPENTHREAD_ENABLE_CHILD_SUPERVISION=1
+else
+    OPENTHREAD_ENABLE_CHILD_SUPERVISION=0
+fi
+
+AC_MSG_RESULT(${enable_child_supervision})
+AC_SUBST(OPENTHREAD_ENABLE_CHILD_SUPERVISION)
+AM_CONDITIONAL([OPENTHREAD_ENABLE_CHILD_SUPERVISION], [test "${enable_child_supervision}" = "yes"])
+AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_CHILD_SUPERVISION],[${OPENTHREAD_ENABLE_CHILD_SUPERVISION}],[Define to 1 if you want to use child supervision feature])
 
 #
 # Default Logging
@@ -958,11 +1054,11 @@ AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_RAW_LINK_API],[${OPENTHREAD_ENABLE_RAW_LIN
 AC_ARG_WITH(examples,
     [AS_HELP_STRING([--with-examples=TARGET],
 
-        [Specify the examples from one of: none, posix, cc2538, cc2650, da15000, nrf52840, samr21, kw41z @<:@default=none@:>@.])],
+        [Specify the examples from one of: none, posix, cc2538, cc2650, da15000, efr32, nrf52840, samr21, kw41z @<:@default=none@:>@.])],
     [
         case "${with_examples}" in
 
-        none|posix|cc2538|cc2650|da15000|nrf52840|samr21|kw41z)
+        none|posix|cc2538|cc2650|da15000|efr32|nrf52840|samr21|kw41z)
             ;;
         *)
             AC_MSG_ERROR([Invalid value ${with_examples} for --with-examples])
@@ -993,6 +1089,11 @@ case ${with_examples} in
     da15000)
         OPENTHREAD_EXAMPLES_DA15000=1
         AC_DEFINE_UNQUOTED([OPENTHREAD_EXAMPLES_DA15000],[${OPENTHREAD_EXAMPLES_DA15000}],[Define to 1 if you want to use da15000 examples])
+        ;;
+
+    efr32)
+        OPENTHREAD_EXAMPLES_EFR32=1
+        AC_DEFINE_UNQUOTED([OPENTHREAD_EXAMPLES_EFR32],[${OPENTHREAD_EXAMPLES_EFR32}],[Define to 1 if you want to use efr32 examples])
         ;;
 
     nrf52840)
@@ -1029,6 +1130,9 @@ AM_CONDITIONAL([OPENTHREAD_EXAMPLES_CC2650], [test "${OPENTHREAD_EXAMPLES}" = "c
 
 AC_SUBST(OPENTHREAD_EXAMPLES_DA15000)
 AM_CONDITIONAL([OPENTHREAD_EXAMPLES_DA15000], [test "${OPENTHREAD_EXAMPLES}" = "da15000"])
+
+AC_SUBST(OPENTHREAD_EXAMPLES_EFR32)
+AM_CONDITIONAL([OPENTHREAD_EXAMPLES_EFR32], [test "${OPENTHREAD_EXAMPLES}" = "efr32"])
 
 AC_SUBST(OPENTHREAD_EXAMPLES_NRF52840)
 AM_CONDITIONAL([OPENTHREAD_EXAMPLES_NRF52840], [test "${OPENTHREAD_EXAMPLES}" = "nrf52840"])
@@ -1105,32 +1209,39 @@ AC_MSG_NOTICE([checking required package dependencies])
 # NL_WITH_PACKAGE(...)
 
 #
-# Checks for missing functions
-#
-
-AC_DEFUN([CHECK_MISSING_FUNC], [
-    AC_CHECK_FUNC($1, [], [
-        nl_cv_missing_$1=yes
-        MISSING_CPPFLAGS="${MISSING_CPPFLAGS} "'-include $(top_srcdir)/src/missing/$1/$1.h'
-        MISSING_LIBADD="${MISSING_LIBADD} "'$(top_builddir)/src/missing/$1/lib$1.la'
-    ])
-    AM_CONDITIONAL(m4_toupper(MISSING_$1), [test "${nl_cv_missing_$1}" = "yes"])
-])
-AC_SUBST(MISSING_CPPFLAGS)
-AC_SUBST(MISSING_LIBADD)
-
-CHECK_MISSING_FUNC([strlcpy])
-CHECK_MISSING_FUNC([strlcat])
-
-#
 # Check for headers
 #
 
+#---------------------------------------------------
+# Enable BSD Security Features
+# This enables strlcpy() and other friends in GNU land.
+# While the references below generally speak of: "glibc"
+# The ARM Embedded platform uses the nano instance of NEWLIB
+# Which greatly follows and mirrors glibc.
+# --------------------------------------------------
+#
+# References:
+# 1) http://stackoverflow.com/questions/29201515/what-does-d-default-source-do
+# 2) http://man7.org/linux/man-pages/man7/feature_test_macros.7.html
+#
+CFLAGS="${CFLAGS} -D_BSD_SOURCE=1 -D_DEFAULT_SOURCE=1"
+CXXFLAGS="${CXXFLAGS} -D_BSD_SOURCE=1 -D_DEFAULT_SOURCE=1"
+
+OLD_CFLAGS="${CFLAGS}"
+CFLAGS="${CFLAGS} -Wno-error=address"
 AC_HEADER_STDBOOL
+CFLAGS="${OLD_CFLAGS}"
 AC_HEADER_STDC
 
 AC_CHECK_HEADERS([stdint.h])
 AC_CHECK_HEADERS([string.h])
+
+#
+# Missing Functions
+#
+AC_CHECK_FUNC([strlcpy], [AC_DEFINE([HAVE_STRLCPY], [1], [Define if strlcpy exists.])])
+AC_CHECK_FUNC([strlcat], [AC_DEFINE([HAVE_STRLCAT], [1], [Define if strlcat exists.])])
+AC_CHECK_FUNC([strnlen], [AC_DEFINE([HAVE_STRNLEN], [1], [Define if strnlen exists.])])
 
 #
 # Check for types and structures
@@ -1180,11 +1291,6 @@ src/cli/Makefile
 src/ncp/Makefile
 src/core/Makefile
 src/diag/Makefile
-src/missing/Makefile
-src/missing/stdbool/Makefile
-src/missing/stdint/Makefile
-src/missing/strlcat/Makefile
-src/missing/strlcpy/Makefile
 third_party/Makefile
 third_party/mbedtls/Makefile
 examples/Makefile
@@ -1195,6 +1301,7 @@ examples/platforms/Makefile
 examples/platforms/cc2538/Makefile
 examples/platforms/cc2650/Makefile
 examples/platforms/da15000/Makefile
+examples/platforms/efr32/Makefile
 examples/platforms/nrf52840/Makefile
 examples/platforms/samr21/Makefile
 examples/platforms/kw41z/Makefile
@@ -1204,8 +1311,6 @@ tools/Makefile
 tools/harness-automation/Makefile
 tools/harness-thci/Makefile
 tools/spi-hdlc-adapter/Makefile
-tools/spinel-cli/Makefile
-tools/spinel-cli/spinel/Makefile
 tests/Makefile
 tests/scripts/Makefile
 tests/scripts/thread-cert/Makefile
@@ -1276,21 +1381,24 @@ AC_MSG_NOTICE([
   OpenThread NCP-MTD support                : ${enable_ncp_app_mtd}
   OpenThread NCP-FTD support                : ${enable_ncp_app_ftd}
   OpenThread NCP-BUS Configuration          : ${with_ncp_bus}
+  OpenThread MTD Network Diagnostic support : ${enable_mtd_network_diagnostic}
   OpenThread builtin mbedtls support        : ${enable_builtin_mbedtls}
+  OpenThread Border Agent Proxy support     : ${enable_border_agent_proxy}
   OpenThread Commissioner support           : ${enable_commissioner}
   OpenThread Joiner support                 : ${enable_joiner}
   OpenThread DTLS support                   : ${enable_dtls}
   OpenThread Jam Detection support          : ${enable_jam_detection}
   OpenThread MAC Whitelist support          : ${enable_mac_whitelist}
   OpenThread Diagnostics support            : ${enable_diag}
+  OpenThread Child Supervision support      : ${enable_child_supervision}
   OpenThread Legacy network support         : ${enable_legacy}
   OpenThread Default logging support        : ${enable_default_logging}
   OpenThread Certification log support      : ${enable_cert_log}
   OpenThread DHCPv6 Server support          : ${enable_dhcp6_server}
   OpenThread DHCPv6 Client support          : ${enable_dhcp6_client}
   OpenThread DNS Client support             : ${enable_dns_client}
-  Openthread Application CoAP support       : ${enable_application_coap}
-  Openthread Raw Link-Layer support         : ${enable_raw_link_api}
+  OpenThread Application CoAP support       : ${enable_application_coap}
+  OpenThread Raw Link-Layer support         : ${enable_raw_link_api}
   OpenThread examples                       : ${OPENTHREAD_EXAMPLES}
   OpenThread platform information           : ${PLATFORM_INFO}
 

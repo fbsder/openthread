@@ -34,9 +34,11 @@
 #ifndef IP6_FILTER_HPP_
 #define IP6_FILTER_HPP_
 
-#include "openthread/openthread.h"
+#include <openthread/openthread.h>
 
-namespace Thread {
+#include "common/message.hpp"
+
+namespace ot {
 namespace Ip6 {
 
 /**
@@ -116,6 +118,6 @@ private:
 };
 
 }  // namespace Ip6
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // IP6_FILTER_HPP_

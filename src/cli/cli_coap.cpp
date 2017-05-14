@@ -31,15 +31,22 @@
  *   This file implements a simple CLI coap server and client.
  */
 
-#include <ctype.h>
-#include <cli/cli.hpp>
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
 
 #if OPENTHREAD_ENABLE_APPLICATION_COAP
 
-#include <cli/cli_coap.hpp>
-#include <coap/coap_header.hpp>
+#include "cli_coap.hpp"
 
-namespace Thread {
+#include <ctype.h>
+
+#include "cli/cli.hpp"
+#include "coap/coap_header.hpp"
+
+namespace ot {
 namespace Cli {
 
 const CoapCommand Coap::sCommands[] =
@@ -133,14 +140,14 @@ ThreadError Coap::ProcessServer(int argc, char *argv[])
 
     if (strcmp(argv[0], "start") == 0)
     {
-        SuccessOrExit(error = otCoapServerStart(sInstance));
-        SuccessOrExit(error = otCoapServerAddResource(sInstance, &sResource));
+        SuccessOrExit(error = otCoapStart(sInstance, OT_DEFAULT_COAP_PORT));
+        SuccessOrExit(error = otCoapAddResource(sInstance, &sResource));
         sServer->OutputFormat("Server started with resource '%s': ", sResource.mUriPath);
     }
     else if (strcmp(argv[0], "stop") == 0)
     {
-        otCoapServerRemoveResource(sInstance, &sResource);
-        SuccessOrExit(error = otCoapServerStop(sInstance));
+        otCoapRemoveResource(sInstance, &sResource);
+        SuccessOrExit(error = otCoapStop(sInstance));
         sServer->OutputFormat("Server stopped: ");
     }
     else if (strcmp(argv[0], "name") == 0)
@@ -175,7 +182,7 @@ void Coap::HandleServerResponse(otCoapHeader *aHeader, otMessage *aMessage, otMe
     ThreadError error = kThreadError_None;
     otCoapHeader responseHeader;
     otMessage *responseMessage;
-    otCoapCode responseCode = kCoapCodeEmpty ;
+    otCoapCode responseCode = kCoapCodeEmpty;
     char responseContent = '0';
 
     sServer->OutputFormat("Received CoAP request from [%x:%x:%x:%x:%x:%x:%x:%x]: ",
@@ -266,6 +273,7 @@ ThreadError Coap::ProcessClient(int argc, char *argv[])
     otMessage *message = NULL;
     otMessageInfo messageInfo;
     otCoapHeader header;
+    uint16_t payloadLength = 0;
 
     // Default parameters
     char coapUri[kMaxUriLength] = "test";
@@ -328,17 +336,26 @@ ThreadError Coap::ProcessClient(int argc, char *argv[])
     }
 
     otCoapHeaderInit(&header, coapType, coapCode);
-    otCoapHeaderGenerateToken(&header, Thread::Coap::Header::kDefaultTokenLength);
+    otCoapHeaderGenerateToken(&header, ot::Coap::Header::kDefaultTokenLength);
     SuccessOrExit(error = otCoapHeaderAppendUriPathOptions(&header, coapUri));
-    otCoapHeaderSetPayloadMarker(&header);
+
+    if (argc > 4)
+    {
+        payloadLength = static_cast<uint16_t>(strlen(argv[4]));
+
+        if (payloadLength > 0)
+        {
+            otCoapHeaderSetPayloadMarker(&header);
+        }
+    }
 
     message = otCoapNewMessage(sInstance, &header);
     VerifyOrExit(message != NULL, error = kThreadError_NoBufs);
 
     // Embed content into message if given
-    if (argc > 4)
+    if (payloadLength > 0)
     {
-        SuccessOrExit(error = otMessageAppend(message, argv[4], static_cast<uint16_t>(strlen(argv[4]))));
+        SuccessOrExit(error = otMessageAppend(message, argv[4], payloadLength));
     }
 
     memset(&messageInfo, 0, sizeof(messageInfo));
@@ -392,6 +409,6 @@ void Coap::HandleClientResponse(otCoapHeader *aHeader, otMessage *aMessage, otMe
 }
 
 }  // namespace Cli
-}  // namespace Thread
+}  // namespace ot
 
 #endif // OPENTHREAD_ENABLE_APPLICATION_COAP

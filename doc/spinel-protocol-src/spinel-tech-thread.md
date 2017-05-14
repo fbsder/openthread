@@ -236,8 +236,9 @@ The stable leader network data.
 
 ### PROP 5391: PROP_THREAD_JOINERS {#prop-thread-joiners}
 
-* Type: Read-Write
+* Type: Insert/Remove Only (optionally Read-Write)
 * Packed-Encoding: `A(t(ULE))`
+* Required capability: `CAP_THREAD_COMMISSIONER`
 
 Data per item is:
 
@@ -246,11 +247,80 @@ Data per item is:
 * `E`: Extended/long address (optional)
 
 Passess Pre-Shared Key for the Device to the NCP in the commissioning process.
-When the Extended address is ommited all Devices which provided a valid PSKd are allowed to join the Thread Network.
+When the Extended address is ommited all Devices which provided a valid PSKd
+are allowed to join the Thread Network.
 
 ### PROP 5392: PROP_THREAD_COMMISSIONER_ENABLED {#prop-thread-commissioner-enabled}
 
-* Type: Read-Write
+* Type: Write only (optionally Read-Write)
 * Packed-Encoding: `b`
+* Required capability: `CAP_THREAD_COMMISSIONER`
 
 Set to true to enable the native commissioner. It is mandatory before adding the joiner to the network.
+
+### PROP 5393: PROP_THREAD_BA_PROXY_ENABLED {#prop-thread-ba-proxy-enabled}
+
+* Type: Read-Write
+* Packed-Encoding: `b`
+* Required capability: `CAP_THREAD_BA_PROXY`
+
+Set to true to enable the border agent proxy.
+
+### PROP 5394: PROP_THREAD_BA_PROXY_STREAM {#prop-thread-ba-proxy-stream}
+
+* Type: Read-Write-Stream
+* Packed-Encoding: `dSS`
+* Required capability: `CAP_THREAD_BA_PROXY`
+
+Data per item is:
+
+* `d`: CoAP frame
+* `S`: source/destination RLOC/ALOC
+* `S`: source/destination port
+
+Octects: | 2      | *n*  |    2    |  2
+---------|--------|------|---------|-------
+Fields:  | Length | CoAP | locator | port
+
+This property allows the host to send and receive border-agent-related
+CoAP requests/responses from the NCP's RLOC address. This allows the
+host driver to implement a Thread border agent.
+
+
+### PROP 5395: PROP_THREAD_DISOVERY_SCAN_JOINER_FLAG {#prop-thread-discovery-scan-joiner-flag}
+
+* Type: Read-Write
+* Packed-Encoding:: `b`
+
+This property specifies the value used in Thread MLE Discovery Request
+TLV during discovery scan operation. Default value is `false`.
+
+### PROP 5396: PROP_THREAD_DISCOVERY_SCAN_ENABLE_FILTERING {#prop-thread-discovery-scan-enable-filtering}
+
+* Type: Read-Write
+* Packed-Encoding:: `b`
+
+This property is used to enable/disable EUI64 filtering during discovery
+scan operation. Default value is `false`.
+
+### PROP 5397: SPINEL_PROP_THREAD_DISCOVERY_SCAN_PANID (#prop-thread-discovery-scan-panid)
+
+* Type: Read-write
+* Packed-Encoding:: `S`
+
+This property specifies the PANID used for filtering during discovery
+scan operation. Default value is `0xffff` (broadcast PANID) which disables
+PANID filtering.
+
+### PROP 5398: SPINEL_PROP_THREAD_STEERING_DATA {#prop-thread-steering-data}
+
+* Type: Write-Only
+* Packed-Encoding: `E`
+* Required capability: `SPINEL_CAP_OOB_STEERING_DATA`
+
+This property can be used to set the steering data for MLE Discovery
+Response messages.
+
+* All zeros to clear the steering data (indicating no steering data).
+* All 0xFFs to set the steering data (bloom filter) to accept/allow all.
+* A specific EUI64 which is then added to steering data/bloom filter.

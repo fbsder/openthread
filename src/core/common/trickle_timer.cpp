@@ -31,13 +31,20 @@
  *   This file implements the trickle timer logic.
  */
 
-#include "openthread/platform/random.h"
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
 
-#include <common/code_utils.hpp>
-#include <common/debug.hpp>
-#include <common/trickle_timer.hpp>
+#include "trickle_timer.hpp"
 
-namespace Thread {
+#include <openthread/platform/random.h>
+
+#include "common/code_utils.hpp"
+#include "common/debug.hpp"
+
+namespace ot {
 
 TrickleTimer::TrickleTimer(
     TimerScheduler &aScheduler,
@@ -236,4 +243,4 @@ void TrickleTimer::HandleTimerFired(void)
     }
 }
 
-}  // namespace Thread
+}  // namespace ot

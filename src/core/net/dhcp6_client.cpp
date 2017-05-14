@@ -33,21 +33,28 @@
 
 #define WPP_NAME "dhcp6_client.tmh"
 
-#include "openthread/types.h"
-#include "openthread/platform/random.h"
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
 
-#include <common/code_utils.hpp>
-#include <common/encoding.hpp>
-#include <common/logging.hpp>
-#include <mac/mac.hpp>
-#include <net/dhcp6.hpp>
-#include <net/dhcp6_client.hpp>
-#include <thread/thread_netif.hpp>
+#include "dhcp6_client.hpp"
 
-using Thread::Encoding::BigEndian::HostSwap16;
-using Thread::Encoding::BigEndian::HostSwap32;
+#include <openthread/types.h>
+#include <openthread/platform/random.h>
 
-namespace Thread {
+#include "common/code_utils.hpp"
+#include "common/encoding.hpp"
+#include "common/logging.hpp"
+#include "mac/mac.hpp"
+#include "net/dhcp6.hpp"
+#include "thread/thread_netif.hpp"
+
+using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap32;
+
+namespace ot {
 
 namespace Dhcp6 {
 
@@ -79,7 +86,7 @@ void Dhcp6Client::UpdateAddresses(otInstance *aInstance, otDhcpAddress *aAddress
                                   void *aContext)
 {
     (void)aContext;
-    bool found = false;;
+    bool found = false;
     bool newAgent = false;
     otDhcpAddress *address = NULL;
     otNetworkDataIterator iterator;
@@ -717,4 +724,4 @@ exit:
 }
 
 }  // namespace Dhcp6
-}  // namespace Thread
+}  // namespace ot

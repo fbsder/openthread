@@ -39,10 +39,10 @@
 #include <openthread-config.h>
 #endif
 
-#include <ncp/ncp_base.hpp>
-#include <ncp/hdlc.hpp>
+#include "ncp/hdlc.hpp"
+#include "ncp/ncp_base.hpp"
 
-namespace Thread {
+namespace ot {
 
 class NcpUart : public NcpBase
 {
@@ -118,6 +118,6 @@ private:
     Tasklet         mUartSendTask;
 };
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NCP_UART_HPP_

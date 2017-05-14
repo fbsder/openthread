@@ -37,18 +37,19 @@
 #include <openthread-config.h>
 #endif
 
-#include "openthread/openthread.h"
+#include "slaac_address.hpp"
 
-#include <common/debug.hpp>
-#include <common/code_utils.hpp>
-#include <crypto/sha256.hpp>
-#include <mac/mac.hpp>
-#include <net/ip6_address.hpp>
-#include <utils/slaac_address.hpp>
+#include "utils/wrap_string.h"
 
-#include <string.h>
+#include <openthread/openthread.h>
 
-namespace Thread {
+#include "common/code_utils.hpp"
+#include "common/debug.hpp"
+#include "crypto/sha256.hpp"
+#include "mac/mac.hpp"
+#include "net/ip6_address.hpp"
+
+namespace ot {
 namespace Utils {
 
 void Slaac::UpdateAddresses(otInstance *aInstance, otNetifAddress *aAddresses, uint32_t aNumAddresses,
@@ -236,4 +237,4 @@ exit:
 
 
 }  // namespace Slaac
-}  // namespace Thread
+}  // namespace ot

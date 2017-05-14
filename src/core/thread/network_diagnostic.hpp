@@ -34,15 +34,13 @@
 #ifndef NETWORK_DIAGNOSTIC_HPP_
 #define NETWORK_DIAGNOSTIC_HPP_
 
-#include <openthread-core-config.h>
+#include <openthread/types.h>
 
-#include "openthread/types.h"
+#include "openthread-core-config.h"
+#include "coap/coap.hpp"
+#include "net/udp6.hpp"
 
-#include <coap/coap_client.hpp>
-#include <coap/coap_server.hpp>
-#include <net/udp6.hpp>
-
-namespace Thread {
+namespace ot {
 
 class ThreadNetif;
 
@@ -156,6 +154,6 @@ private:
  */
 } // namespace NetworkDiagnostic
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NETWORK_DIAGNOSTIC_HPP_

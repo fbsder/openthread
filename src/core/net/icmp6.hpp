@@ -35,12 +35,13 @@
 #define ICMP6_HPP_
 
 #include <openthread/types.h>
-#include <common/encoding.hpp>
-#include <net/ip6_headers.hpp>
 
-using Thread::Encoding::BigEndian::HostSwap16;
+#include "common/encoding.hpp"
+#include "net/ip6_headers.hpp"
 
-namespace Thread {
+using ot::Encoding::BigEndian::HostSwap16;
+
+namespace ot {
 namespace Ip6 {
 
 /**
@@ -338,6 +339,6 @@ private:
  */
 
 }  // namespace Ip6
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NET_ICMP6_HPP_

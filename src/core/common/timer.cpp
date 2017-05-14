@@ -33,16 +33,23 @@
 
 #define WPP_NAME "timer.tmh"
 
-#include "openthread/platform/alarm.h"
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
 
-#include <common/code_utils.hpp>
-#include <common/timer.hpp>
-#include <common/debug.hpp>
-#include <common/logging.hpp>
-#include <net/ip6.hpp>
-#include <openthread-instance.h>
+#include "timer.hpp"
 
-namespace Thread {
+#include <openthread/platform/alarm.h>
+
+#include "openthread-instance.h"
+#include "common/code_utils.hpp"
+#include "common/debug.hpp"
+#include "common/logging.hpp"
+#include "net/ip6.hpp"
+
+namespace ot {
 
 TimerScheduler::TimerScheduler(void):
     mHead(NULL)
@@ -213,4 +220,4 @@ bool TimerScheduler::TimerCompare(const Timer &aTimerA, const Timer &aTimerB)
     return retval;
 }
 
-}  // namespace Thread
+}  // namespace ot

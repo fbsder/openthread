@@ -31,16 +31,23 @@
  *   This file implements IPv6 datagram filtering.
  */
 
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
+
+#include "ip6_filter.hpp"
+
 #include <stdio.h>
 
-#include <common/code_utils.hpp>
-#include <net/ip6.hpp>
-#include <net/ip6_filter.hpp>
-#include <net/udp6.hpp>
-#include <net/tcp.hpp>
-#include <thread/mle.hpp>
+#include "common/code_utils.hpp"
+#include "net/ip6.hpp"
+#include "net/tcp.hpp"
+#include "net/udp6.hpp"
+#include "thread/mle.hpp"
 
-namespace Thread {
+namespace ot {
 namespace Ip6 {
 
 Filter::Filter(void)
@@ -179,4 +186,4 @@ const uint16_t *Filter::GetUnsecurePorts(uint8_t &aNumEntries) const
 }
 
 }  // namespace Ip6
-}  // namespace Thread
+}  // namespace ot

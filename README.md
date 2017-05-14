@@ -80,14 +80,15 @@ The development of OpenThread is ongoing to regularly provide additional feature
 
 Led by Nest, the following companies are contributing to the ongoing development of OpenThread:
 
-<a href="https://www.arm.com/"><img src="doc/images/ot-contrib-arm.png" alt="ARM" width="200px"></a><a href="http://www.atmel.com/"><img src="doc/images/ot-contrib-atmel.png" alt="Atmel" width="200px"></a><a href="ttp://www.dialog-semiconductor.com/"><img src="doc/images/ot-contrib-dialog.png" alt="Dialog" width="200px"></a><a href="https://www.microsoft.com/en-us/"><img src="doc/images/ot-contrib-ms.png" alt="Microsoft" width="200px"></a><a href="https://nest.com/"><img src="doc/images/ot-contrib-nest.png" alt="Nest" width="200px"></a><a href="http://www.nordicsemi.com/"><img src="doc/images/ot-contrib-nordic.png" alt="Nordic" width="200px"></a><a href="https://www.qualcomm.com/"><img src="doc/images/ot-contrib-qc.png" alt="Qualcomm" width="200px"></a><a href="https://www.ti.com/"><img src="doc/images/ot-contrib-ti.png" alt="Texas Instruments" width="200px"></a>
+<a href="https://www.arm.com/"><img src="doc/images/ot-contrib-arm.png" alt="ARM" width="200px"></a><a href="http://www.atmel.com/"><img src="doc/images/ot-contrib-atmel.png" alt="Atmel" width="200px"></a><a href="http://www.dialog-semiconductor.com/"><img src="doc/images/ot-contrib-dialog.png" alt="Dialog" width="200px"></a><a href="https://www.microsoft.com/en-us/"><img src="doc/images/ot-contrib-ms.png" alt="Microsoft" width="200px"></a><a href="https://nest.com/"><img src="doc/images/ot-contrib-nest.png" alt="Nest" width="200px"></a><a href="http://www.nordicsemi.com/"><img src="doc/images/ot-contrib-nordic.png" alt="Nordic" width="200px"></a><a href="https://www.qualcomm.com/"><img src="doc/images/ot-contrib-qc.png" alt="Qualcomm" width="200px"></a><a href="https://www.ti.com/"><img src="doc/images/ot-contrib-ti.png" alt="Texas Instruments" width="200px"></a>
 
-OpenThread has been ported to several devices and platforms. Build examples are included in the OpenThread project.
+OpenThread has been ported to several devices and platforms by both the OpenThread team and the community. Build examples for all supported platforms are included in the OpenThread project.
 
 ### IEEE 802.15.4 Platform Support
 
 * [Dialog Semiconductor DA15000](https://github.com/openthread/openthread/wiki/Platforms#dialog-da15000)
 * [Nordic Semiconductor nRF52840](https://github.com/openthread/openthread/wiki/Platforms#nordic-semiconductor-nrf52840)
+* [Silicon Labs EFR32](https://github.com/openthread/openthread/wiki/Platforms#silicon-labs-efr32)
 * [Texas Instruments CC2538](https://github.com/openthread/openthread/wiki/Platforms#texas-instruments-cc2538)
 * [Texas Instruments CC2650](https://github.com/openthread/openthread/wiki/Platforms#texas-instruments-cc2650)
 * [POSIX Emulation](https://github.com/openthread/openthread/wiki/Platforms#posix-emulation)
@@ -100,6 +101,10 @@ Desktop platforms can also be used to control and interface with a Thread networ
 
 * **Unix** — [`wpantund`](https://github.com/openthread/wpantund) provides an interface to an NCP
 * **Windows 10** — [universal drivers](https://github.com/openthread/openthread/wiki/OpenThread-on%C2%A0Windows) to interface with devices running OpenThread
+
+### Porting
+
+If you are interested in porting OpenThread to a new platform, see the [Porting Guide](https://github.com/openthread/openthread/wiki/Porting-Guide) for hardware requirements and detailed porting instructions.
 
 # What tools are available for testing?
 

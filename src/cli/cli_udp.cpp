@@ -31,15 +31,22 @@
  *   This file implements the CLI server on a UDP socket.
  */
 
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
+
+#include "cli_udp.hpp"
+
 #include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
+#include "utils/wrap_string.h"
 
-#include <cli/cli.hpp>
-#include <cli/cli_udp.hpp>
-#include <common/code_utils.hpp>
+#include "cli/cli.hpp"
+#include "common/code_utils.hpp"
 
-namespace Thread {
+namespace ot {
 namespace Cli {
 
 Udp::Udp(otInstance *aInstance, Interpreter *aInterpreter):
@@ -130,4 +137,4 @@ int Udp::OutputFormat(const char *fmt, ...)
 }
 
 }  // namespace Cli
-}  // namespace Thread
+}  // namespace ot

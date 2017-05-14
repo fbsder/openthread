@@ -34,12 +34,12 @@
 #ifndef LOWPAN_HPP_
 #define LOWPAN_HPP_
 
-#include <common/message.hpp>
-#include <mac/mac_frame.hpp>
-#include <net/ip6.hpp>
-#include <net/ip6_address.hpp>
+#include "common/message.hpp"
+#include "mac/mac_frame.hpp"
+#include "net/ip6.hpp"
+#include "net/ip6_address.hpp"
 
-namespace Thread {
+namespace ot {
 
 class ThreadNetif;
 
@@ -55,7 +55,7 @@ namespace NetworkData { class Leader; }
  */
 
 /**
- * @namespace Thread::Lowpan
+ * @namespace ot::Lowpan
  *
  * @brief
  *   This namespace includes definitions for 6LoWPAN message processing.
@@ -499,6 +499,6 @@ private:
  */
 
 }  // namespace Lowpan
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // LOWPAN_HPP_

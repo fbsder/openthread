@@ -32,17 +32,24 @@
  *
  */
 
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
+
+#include "dataset.hpp"
+
 #include <stdio.h>
 
-#include "openthread/platform/settings.h"
+#include <openthread/platform/settings.h>
 
-#include <common/code_utils.hpp>
-#include <common/settings.hpp>
-#include <meshcop/dataset.hpp>
-#include <meshcop/tlvs.hpp>
-#include <thread/mle_tlvs.hpp>
+#include "common/code_utils.hpp"
+#include "common/settings.hpp"
+#include "meshcop/meshcop_tlvs.hpp"
+#include "thread/mle_tlvs.hpp"
 
-namespace Thread {
+namespace ot {
 namespace MeshCoP {
 
 Dataset::Dataset(otInstance *aInstance, const Tlv::Type aType) :
@@ -58,8 +65,7 @@ void Dataset::Clear(bool isLocal)
 
     if (isLocal)
     {
-        otPlatSettingsDelete(mInstance, static_cast<uint16_t>(mType == Tlv::kActiveTimestamp ? kKeyActiveDataset :
-                                                              kKeyPendingDataset), -1);
+        otPlatSettingsDelete(mInstance, GetSettingsKey(), -1);
     }
 }
 
@@ -182,7 +188,7 @@ void Dataset::Get(otOperationalDataset &aDataset) const
         case Tlv::kNetworkMasterKey:
         {
             const NetworkMasterKeyTlv *tlv = static_cast<const NetworkMasterKeyTlv *>(cur);
-            memcpy(aDataset.mMasterKey.m8, tlv->GetNetworkMasterKey(), sizeof(aDataset.mMasterKey));
+            aDataset.mMasterKey = tlv->GetNetworkMasterKey();
             aDataset.mIsMasterKeySet = true;
             break;
         }
@@ -252,6 +258,7 @@ ThreadError Dataset::Set(const Dataset &aDataset)
     return kThreadError_None;
 }
 
+#if OPENTHREAD_FTD
 ThreadError Dataset::Set(const otOperationalDataset &aDataset)
 {
     ThreadError error = kThreadError_None;
@@ -321,7 +328,7 @@ ThreadError Dataset::Set(const otOperationalDataset &aDataset)
     {
         MeshCoP::NetworkMasterKeyTlv tlv;
         tlv.Init();
-        tlv.SetNetworkMasterKey(aDataset.mMasterKey.m8);
+        tlv.SetNetworkMasterKey(aDataset.mMasterKey);
         Set(tlv);
     }
 
@@ -361,6 +368,7 @@ ThreadError Dataset::Set(const otOperationalDataset &aDataset)
 exit:
     return error;
 }
+#endif  // OPENTHREAD_FTD
 
 const Timestamp *Dataset::GetTimestamp(void) const
 {
@@ -432,8 +440,7 @@ ThreadError Dataset::Restore(void)
     ThreadError error;
     uint16_t length = sizeof(mTlvs);
 
-    error = otPlatSettingsGet(mInstance, static_cast<uint16_t>(mType == Tlv::kActiveTimestamp ? kKeyActiveDataset :
-                                                               kKeyPendingDataset), 0, mTlvs, &length);
+    error = otPlatSettingsGet(mInstance, GetSettingsKey(), 0, mTlvs, &length);
     mLength = (error == kThreadError_None) ? length : 0;
 
     return error;
@@ -441,8 +448,8 @@ ThreadError Dataset::Restore(void)
 
 ThreadError Dataset::Store(void)
 {
-    uint16_t key = static_cast<uint16_t>((mType == Tlv::kActiveTimestamp) ? kKeyActiveDataset : kKeyPendingDataset);
     ThreadError error;
+    uint16_t key = GetSettingsKey();
 
     if (mLength == 0)
     {
@@ -529,6 +536,22 @@ exit:
     return error;
 }
 
+uint16_t Dataset::GetSettingsKey(void)
+{
+    uint16_t rval;
+
+    if (mType == Tlv::kActiveTimestamp)
+    {
+        rval = static_cast<uint16_t>(Settings::kKeyActiveDataset);
+    }
+    else
+    {
+        rval = static_cast<uint16_t>(Settings::kKeyPendingDataset);
+    }
+
+    return rval;
+}
+
 void Dataset::Remove(uint8_t *aStart, uint8_t aLength)
 {
     memmove(aStart, aStart + aLength, mLength - (static_cast<uint8_t>(aStart - mTlvs) + aLength));
@@ -536,4 +559,4 @@ void Dataset::Remove(uint8_t *aStart, uint8_t aLength)
 }
 
 }  // namespace MeshCoP
-}  // namespace Thread
+}  // namespace ot

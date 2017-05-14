@@ -34,16 +34,14 @@
 #ifndef ANNOUNCE_BEGIN_SERVER_HPP_
 #define ANNOUNCE_BEGIN_SERVER_HPP_
 
-#include <openthread-core-config.h>
+#include <openthread/types.h>
 
-#include "openthread/types.h"
+#include "openthread-core-config.h"
+#include "coap/coap.hpp"
+#include "common/timer.hpp"
+#include "net/ip6_address.hpp"
 
-#include <coap/coap_client.hpp>
-#include <coap/coap_server.hpp>
-#include <common/timer.hpp>
-#include <net/ip6_address.hpp>
-
-namespace Thread {
+namespace ot {
 
 class ThreadNetif;
 
@@ -119,6 +117,6 @@ private:
  * @}
  */
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // ANNOUNCE_BEGIN_SERVER_HPP_

@@ -31,11 +31,11 @@
  *   This file implements the OpenThread UDP API.
  */
 
-#include "openthread/dns.h"
+#include <openthread/dns.h>
 
 #include "openthread-instance.h"
 
-using namespace Thread;
+using namespace ot;
 
 #if OPENTHREAD_ENABLE_DNS_CLIENT
 ThreadError otDnsClientQuery(otInstance *aInstance, const otDnsQuery *aQuery, otDnsResponseHandler aHandler,

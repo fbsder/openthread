@@ -31,11 +31,11 @@
  *   This file implements the OpenThread Jam Detection API.
  */
 
-#include "openthread/jam_detection.h"
+#include <openthread/jam_detection.h>
 
 #include "openthread-instance.h"
 
-using namespace Thread;
+using namespace ot;
 
 #if OPENTHREAD_ENABLE_JAM_DETECTION
 

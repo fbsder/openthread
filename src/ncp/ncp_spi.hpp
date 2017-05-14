@@ -39,9 +39,9 @@
 #include <openthread-config.h>
 #endif
 
-#include <ncp/ncp_base.hpp>
+#include "ncp/ncp_base.hpp"
 
-namespace Thread {
+namespace ot {
 
 class NcpSpi : public NcpBase
 {
@@ -75,21 +75,10 @@ private:
 
     uint16_t OutboundFrameSize(void);
 
-    static void SpiTransactionComplete(
-        void *context,
-        uint8_t *anOutputBuf,
-        uint16_t anOutputBufLen,
-        uint8_t *anInputBuf,
-        uint16_t anInputBufLen,
-        uint16_t aTransactionLength
-    );
-    void SpiTransactionComplete(
-        uint8_t *anOutputBuf,
-        uint16_t anOutputBufLen,
-        uint8_t *anInputBuf,
-        uint16_t anInputBufLen,
-        uint16_t aTransactionLength
-    );
+    static void SpiTransactionComplete(void *context, uint8_t *aOutputBuf, uint16_t aOutputBufLen, uint8_t *aInputBuf,
+                                       uint16_t aInputBufLen, uint16_t aTransactionLength);
+    void SpiTransactionComplete(uint8_t *aOutputBuf, uint16_t aOutputBufLen, uint8_t *aInputBuf, uint16_t aInputBufLen,
+                                uint16_t aTransactionLength);
 
     static void HandleRxFrame(void *context);
     void HandleRxFrame(void);
@@ -116,6 +105,6 @@ private:
     uint8_t mEmptyReceiveFrame[kSpiHeaderLength];
 };
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NCP_SPI_HPP_

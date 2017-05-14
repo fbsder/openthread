@@ -34,16 +34,14 @@
 #ifndef ENERGY_SCAN_CLIENT_HPP_
 #define ENERGY_SCAN_CLIENT_HPP_
 
-#include <openthread-core-config.h>
+#include <openthread/commissioner.h>
 
-#include "openthread/commissioner.h"
+#include "openthread-core-config.h"
+#include "coap/coap.hpp"
+#include "net/ip6_address.hpp"
+#include "net/udp6.hpp"
 
-#include <coap/coap_client.hpp>
-#include <coap/coap_server.hpp>
-#include <net/ip6_address.hpp>
-#include <net/udp6.hpp>
-
-namespace Thread {
+namespace ot {
 
 class ThreadNetif;
 
@@ -103,6 +101,6 @@ private:
  * @}
  */
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // ENERGY_SCAN_CLIENT_HPP_

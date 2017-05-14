@@ -35,10 +35,10 @@
 #ifndef MESHCOP_DATASET_HPP_
 #define MESHCOP_DATASET_HPP_
 
-#include <common/message.hpp>
-#include <meshcop/tlvs.hpp>
+#include "common/message.hpp"
+#include "meshcop/meshcop_tlvs.hpp"
 
-namespace Thread {
+namespace ot {
 namespace MeshCoP {
 
 class Dataset
@@ -164,7 +164,9 @@ public:
 
     ThreadError Set(const Dataset &aDataset);
 
+#if OPENTHREAD_FTD
     ThreadError Set(const otOperationalDataset &aDataset);
+#endif
 
     /**
      * This method removes a TLV from the Dataset.
@@ -184,6 +186,8 @@ public:
     ThreadError AppendMleDatasetTlv(Message &aMessage);
 
 private:
+    uint16_t GetSettingsKey(void);
+
     void Remove(uint8_t *aStart, uint8_t aLength);
 
     Tlv::Type  mType;            ///< Active or Pending
@@ -193,6 +197,6 @@ private:
 };
 
 }  // namespace MeshCoP
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // MESHCOP_DATASET_HPP_

@@ -29,16 +29,16 @@
 #ifndef TEST_LOWPAN_HPP
 #define TEST_LOWPAN_HPP
 
-#include <stdint.h>
+#include "utils/wrap_stdint.h"
 
-#include "openthread/openthread.h"
+#include <openthread/openthread.h>
 
-#include <mac/mac.hpp>
-#include <net/ip6_headers.hpp>
-#include <thread/thread_netif.hpp>
-#include <thread/lowpan.hpp>
+#include "mac/mac.hpp"
+#include "net/ip6_headers.hpp"
+#include "thread/lowpan.hpp"
+#include "thread/thread_netif.hpp"
 
-namespace Thread {
+namespace ot {
 
 class TestIphcVector
 {
@@ -278,6 +278,6 @@ public:
     const char       *mTestName;
 };
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif // TEST_LOWPAN_HPP

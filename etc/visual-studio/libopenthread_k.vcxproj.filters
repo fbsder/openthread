@@ -78,6 +78,9 @@
     <ClCompile Include="..\..\src\core\api\dataset_api.cpp">
       <Filter>Source Files\api</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\core\api\dataset_ftd_api.cpp">
+      <Filter>Source Files\api</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\core\api\dhcp6_api.cpp">
       <Filter>Source Files\api</Filter>
     </ClCompile>
@@ -108,22 +111,16 @@
     <ClCompile Include="..\..\src\core\api\thread_api.cpp">
       <Filter>Source Files\api</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\coap\coap_base.cpp">
-      <Filter>Source Files\coap</Filter>
+    <ClCompile Include="..\..\src\core\api\thread_ftd_api.cpp">
+      <Filter>Source Files\api</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\coap\coap_client.cpp">
+    <ClCompile Include="..\..\src\core\coap\coap.cpp">
       <Filter>Source Files\coap</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\core\coap\coap_header.cpp">
       <Filter>Source Files\coap</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\coap\coap_server.cpp">
-      <Filter>Source Files\coap</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\core\coap\secure_coap_client.cpp">
-      <Filter>Source Files\coap</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\core\coap\secure_coap_server.cpp">
+    <ClCompile Include="..\..\src\core\coap\coap_secure.cpp">
       <Filter>Source Files\coap</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\core\common\logging.cpp">
@@ -234,6 +231,9 @@
     <ClCompile Include="..\..\src\core\thread\thread_netif.cpp">
       <Filter>Source Files\thread</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\core\thread\topology.cpp">
+      <Filter>Source Files\thread</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\core\net\udp6.cpp">
       <Filter>Source Files\net</Filter>
     </ClCompile>
@@ -273,6 +273,9 @@
     <ClCompile Include="..\..\src\core\meshcop\timestamp.cpp">
       <Filter>Source Files\meshcop</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\core\meshcop\meshcop_tlvs.cpp">
+      <Filter>Source Files\meshcop</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\core\crypto\aes_ecb.cpp">
       <Filter>Source Files\crypto</Filter>
     </ClCompile>
@@ -284,6 +287,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\core\crypto\sha256.cpp">
       <Filter>Source Files\crypto</Filter>
+    </ClCompile>
+   <ClCompile Include="..\..\src\core\utils\child_supervision.cpp">
+      <Filter>Source Files\utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\core\utils\slaac_address.cpp">
       <Filter>Source Files\utils</Filter>
@@ -300,10 +306,13 @@
     <ClCompile Include="..\..\src\core\common\crc16.cpp">
       <Filter>Source Files\common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\missing\strlcpy\strlcpy.c">
+    <ClCompile Include="..\..\src\core\utils\missing_strlcpy.c">
       <Filter>Source Files\missing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\missing\strlcat\strlcat.c">
+    <ClCompile Include="..\..\src\core\utils\missing_strlcat.c">
+      <Filter>Source Files\missing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\core\utils\missing_strnlen.c">
       <Filter>Source Files\missing</Filter>
     </ClCompile>
   </ItemGroup>
@@ -311,22 +320,13 @@
     <ClInclude Include="..\..\src\core\openthread-core-config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\coap\coap_base.hpp">
-      <Filter>Header Files\coap</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\coap\coap_client.hpp">
+    <ClInclude Include="..\..\src\core\coap\coap.hpp">
       <Filter>Header Files\coap</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\core\coap\coap_header.hpp">
       <Filter>Header Files\coap</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\coap\coap_server.hpp">
-      <Filter>Header Files\coap</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\coap\secure_coap_client.hpp">
-      <Filter>Header Files\coap</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\coap\secure_coap_server.hpp">
+    <ClInclude Include="..\..\src\core\coap\coap_secure.hpp">
       <Filter>Header Files\coap</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\core\common\code_utils.hpp">
@@ -539,6 +539,9 @@
     <ClInclude Include="..\..\src\core\crypto\sha256.hpp">
       <Filter>Header Files\crypto</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\core\utils\child_supervision.hpp">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\core\utils\slaac_address.hpp">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
@@ -581,6 +584,9 @@
     <ClInclude Include="..\..\include\openthread\dataset.h">
       <Filter>Header Files\openthread</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\openthread\dataset_ftd.h">
+      <Filter>Header Files\openthread</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\openthread\dhcp6_client.h">
       <Filter>Header Files\openthread</Filter>
     </ClInclude>
@@ -620,16 +626,22 @@
     <ClInclude Include="..\..\include\openthread\thread.h">
       <Filter>Header Files\openthread</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\openthread\thread_ftd.h">
+      <Filter>Header Files\openthread</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\openthread\udp.h">
       <Filter>Header Files\openthread</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\core\api\link_raw.hpp">
       <Filter>Header Files\api</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\missing\strlcpy\strlcpy.h">
+    <ClInclude Include="..\..\src\core\utils\wrapper_string.h">
       <Filter>Header Files\missing</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\missing\strlcat\strlcat.h">
+    <ClInclude Include="..\..\src\core\utils\wrapper_stdbool.h">
+      <Filter>Header Files\missing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\utils\wrapper_stdint.h">
       <Filter>Header Files\missing</Filter>
     </ClInclude>
   </ItemGroup>

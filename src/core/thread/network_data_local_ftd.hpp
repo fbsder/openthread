@@ -34,9 +34,9 @@
 #ifndef NETWORK_DATA_LOCAL_HPP_
 #define NETWORK_DATA_LOCAL_HPP_
 
-#include <thread/network_data.hpp>
+#include "thread/network_data.hpp"
 
-namespace Thread {
+namespace ot {
 
 class ThreadNetif;
 
@@ -75,8 +75,9 @@ public:
      * @param[in]  aFlags         The Border Router Flags value.
      * @param[in]  aStable        The Stable value.
      *
-     * @retval kThreadError_None    Successfully added the Border Router entry.
-     * @retval kThreadError_NoBufs  Insufficient space to add the Border Router entry.
+     * @retval kThreadError_None        Successfully added the Border Router entry.
+     * @retval kThreadError_NoBufs      Insufficient space to add the Border Router entry.
+     * @retval kThreadError_InvalidArgs The prefix is mesh local prefix.
      *
      */
     ThreadError AddOnMeshPrefix(const uint8_t *aPrefix, uint8_t aPrefixLength, int8_t aPrf, uint8_t aFlags,
@@ -147,6 +148,6 @@ private:
  * @}
  */
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NETWORK_DATA_LOCAL_HPP_

@@ -36,11 +36,13 @@
 #include <openthread-config.h>
 #endif
 
-#include <string.h>
-#include <common/code_utils.hpp>
-#include <ncp/ncp_buffer.hpp>
+#include "ncp_buffer.hpp"
 
-namespace Thread {
+#include "utils/wrap_string.h"
+
+#include "common/code_utils.hpp"
+
+namespace ot {
 
 NcpFrameBuffer::NcpFrameBuffer(uint8_t *aBuffer, uint16_t aBufferLen) :
     mBuffer(aBuffer),
@@ -668,4 +670,4 @@ exit:
     return frameLength;
 }
 
-}  // namespace Thread
+}  // namespace ot

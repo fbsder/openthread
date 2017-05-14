@@ -34,11 +34,11 @@
 #ifndef NET_SOCKET_HPP_
 #define NET_SOCKET_HPP_
 
-#include "openthread/openthread.h"
+#include <openthread/openthread.h>
 
-#include <net/ip6_address.hpp>
+#include "net/ip6_address.hpp"
 
-namespace Thread {
+namespace ot {
 namespace Ip6 {
 
 /**
@@ -217,6 +217,6 @@ public:
  */
 
 }  // namespace Ip6
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NET_SOCKET_HPP_

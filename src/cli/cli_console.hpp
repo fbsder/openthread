@@ -34,11 +34,12 @@
 #ifndef CLI_CONSOLE_HPP_
 #define CLI_CONSOLE_HPP_
 
-#include "openthread/cli.h"
+#include <openthread/cli.h>
 
-#include <cli/cli_server.hpp>
+#include "cli/cli.hpp"
+#include "cli/cli_server.hpp"
 
-namespace Thread {
+namespace ot {
 namespace Cli {
 
 /**
@@ -110,6 +111,6 @@ private:
 };
 
 }  // namespace Cli
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // CLI_CONSOLE_HPP_

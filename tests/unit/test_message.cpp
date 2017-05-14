@@ -26,18 +26,21 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "utils/wrap_string.h"
+
+#include <openthread/openthread.h>
+
+#include "openthread-instance.h"
+#include "common/debug.hpp"
+#include "common/message.hpp"
+
 #include "test_util.h"
-#include "openthread/openthread.h"
-#include <openthread-instance.h>
-#include <common/debug.hpp>
-#include <common/message.hpp>
-#include <string.h>
 
 void TestMessage(void)
 {
     otInstance instance;
-    Thread::MessagePool messagePool(&instance);
-    Thread::Message *message;
+    ot::MessagePool messagePool(&instance);
+    ot::Message *message;
     uint8_t writeBuffer[1024];
     uint8_t readBuffer[1024];
 
@@ -46,7 +49,7 @@ void TestMessage(void)
         writeBuffer[i] = static_cast<uint8_t>(random());
     }
 
-    VerifyOrQuit((message = messagePool.New(Thread::Message::kTypeIp6, 0)) != NULL,
+    VerifyOrQuit((message = messagePool.New(ot::Message::kTypeIp6, 0)) != NULL,
                  "Message::New failed\n");
     SuccessOrQuit(message->SetLength(sizeof(writeBuffer)),
                   "Message::SetLength failed\n");

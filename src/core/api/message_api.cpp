@@ -31,11 +31,11 @@
  *   This file implements the OpenThread Message API.
  */
 
-#include "openthread/message.h"
+#include <openthread/message.h>
 
 #include "openthread-instance.h"
 
-using namespace Thread;
+using namespace ot;
 
 ThreadError otMessageFree(otMessage *aMessage)
 {
@@ -167,9 +167,6 @@ void otMessageGetBufferInfo(otInstance *aInstance, otBufferInfo *aBufferInfo)
     aInstance->mThreadNetif.GetMle().GetMessageQueue().GetInfo(aBufferInfo->mMleMessages,
                                                                aBufferInfo->mMleBuffers);
 
-    aInstance->mThreadNetif.GetCoapClient().GetRequestMessages().GetInfo(aBufferInfo->mCoapClientMessages,
-                                                                         aBufferInfo->mCoapClientBuffers);
-
-    aInstance->mThreadNetif.GetCoapServer().GetCachedResponses().GetInfo(aBufferInfo->mCoapServerMessages,
-                                                                         aBufferInfo->mCoapServerBuffers);
+    aInstance->mThreadNetif.GetCoap().GetRequestMessages().GetInfo(aBufferInfo->mCoapMessages,
+                                                                   aBufferInfo->mCoapBuffers);
 }

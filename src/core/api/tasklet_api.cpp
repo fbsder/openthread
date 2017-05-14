@@ -33,12 +33,12 @@
 
 #define WPP_NAME "tasklet_api.tmh"
 
-#include "openthread/tasklet.h"
+#include <openthread/tasklet.h>
 
 #include "openthread-instance.h"
 #include "common/logging.hpp"
 
-using namespace Thread;
+using namespace ot;
 
 void otTaskletsProcess(otInstance *aInstance)
 {

@@ -33,19 +33,26 @@
 
 #define WPP_NAME "data_poll_manager.tmh"
 
-#include "openthread/platform/random.h"
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
 
-#include <common/code_utils.hpp>
-#include <common/logging.hpp>
-#include <common/message.hpp>
-#include <net/ip6.hpp>
-#include <net/netif.hpp>
-#include <thread/data_poll_manager.hpp>
-#include <thread/mesh_forwarder.hpp>
-#include <thread/mle.hpp>
-#include <thread/thread_netif.hpp>
+#include "data_poll_manager.hpp"
 
-namespace Thread {
+#include <openthread/platform/random.h>
+
+#include "common/code_utils.hpp"
+#include "common/logging.hpp"
+#include "common/message.hpp"
+#include "net/ip6.hpp"
+#include "net/netif.hpp"
+#include "thread/mesh_forwarder.hpp"
+#include "thread/mle.hpp"
+#include "thread/thread_netif.hpp"
+
+namespace ot {
 
 DataPollManager::DataPollManager(MeshForwarder &aMeshForwarder):
     mMeshForwarder(aMeshForwarder),
@@ -124,7 +131,7 @@ exit:
     switch (error)
     {
     case kThreadError_None:
-        otLogDebgMac(GetInstance(), "Sent poll");
+        otLogDebgMac(GetInstance(), "Sending data poll");
 
         if (mNoBufferRetxMode == true)
         {
@@ -194,10 +201,15 @@ void DataPollManager::HandlePollSent(ThreadError aError)
             shouldRecalculatePollPeriod = true;
         }
 
+        otLogInfoMac(GetInstance(), "Sent data poll");
+
         break;
 
     default:
         mPollTxFailureCounter++;
+
+        otLogInfoMac(GetInstance(), "Failed to send data poll, error:%s, retx:%d/%d",
+                     otThreadErrorToString(aError), mPollTxFailureCounter, kMaxPollRetxAttempts);
 
         if (mPollTxFailureCounter < kMaxPollRetxAttempts)
         {
@@ -209,8 +221,6 @@ void DataPollManager::HandlePollSent(ThreadError aError)
         }
         else
         {
-            otLogWarnMac(GetInstance(), "Data poll tx failed in %d back-to-back attempts.", mPollTxFailureCounter);
-
             mRetxMode = false;
             mPollTxFailureCounter = 0;
             shouldRecalculatePollPeriod = true;
@@ -238,13 +248,14 @@ void DataPollManager::HandlePollTimeout(void)
 
     mPollTimeoutCounter++;
 
-    if (mPollTimeoutCounter <= kQuickPollsAfterTimeout)
+    otLogInfoMac(GetInstance(), "Data poll timeout, retry:%d/%d", mPollTimeoutCounter, kQuickPollsAfterTimeout);
+
+    if (mPollTimeoutCounter < kQuickPollsAfterTimeout)
     {
         SendDataPoll();
     }
     else
     {
-        otLogInfoMac(GetInstance(), "Data poll timeout happened %d times back-to-back.", mPollTimeoutCounter);
         mPollTimeoutCounter = 0;
     }
 
@@ -322,16 +333,7 @@ void DataPollManager::ScheduleNextPoll(PollPeriodSelector aPollPeriodSelector)
 
     if (mTimer.IsRunning())
     {
-        uint32_t elapsedTime = Timer::GetNow() - mTimer.Gett0();
-
-        if (elapsedTime >= mPollPeriod)
-        {
-            SendDataPoll();
-        }
-        else
-        {
-            mTimer.Start(mPollPeriod - elapsedTime);
-        }
+        mTimer.StartAt(mTimer.Gett0(), mPollPeriod);
     }
     else
     {
@@ -382,7 +384,7 @@ uint32_t DataPollManager::CalculatePollPeriod(void) const
 
     if (period == 0)
     {
-        period = Timer::SecToMsec(mMeshForwarder.GetNetif().GetMle().GetTimeout() / Mle::kMaxChildKeepAliveAttempts);
+        period = Timer::SecToMsec(mMeshForwarder.GetNetif().GetMle().GetTimeout()) -  kRetxPollPeriod * kMaxPollRetxAttempts;
 
         if (period == 0)
         {
@@ -398,4 +400,4 @@ void DataPollManager::HandlePollTimer(void *aContext)
     static_cast<DataPollManager *>(aContext)->SendDataPoll();
 }
 
-}  // namespace Thread
+}  // namespace ot

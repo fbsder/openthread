@@ -31,11 +31,18 @@
  *   This file implements AES-CCM.
  */
 
-#include <common/code_utils.hpp>
-#include <common/debug.hpp>
-#include <crypto/aes_ccm.hpp>
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
 
-namespace Thread {
+#include "aes_ccm.hpp"
+
+#include "common/code_utils.hpp"
+#include "common/debug.hpp"
+
+namespace ot {
 namespace Crypto {
 
 ThreadError AesCcm::SetKey(const uint8_t *aKey, uint16_t aKeyLength)
@@ -274,4 +281,4 @@ void AesCcm::Finalize(void *tag, uint8_t *aTagLength)
 }
 
 }  // namespace Crypto
-}  // namespace Thread
+}  // namespace ot

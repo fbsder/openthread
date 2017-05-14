@@ -31,6 +31,8 @@
  *   This file implements the Joiner Router role.
  */
 
+#if OPENTHREAD_FTD
+
 #define WPP_NAME "joiner_router.tmh"
 
 #ifdef OPENTHREAD_CONFIG_FILE
@@ -39,24 +41,23 @@
 #include <openthread-config.h>
 #endif
 
-#if OPENTHREAD_FTD
+#include "joiner_router.hpp"
 
 #include <stdio.h>
 
-#include <common/code_utils.hpp>
-#include <common/encoding.hpp>
-#include <common/logging.hpp>
-#include <meshcop/joiner_router.hpp>
-#include <meshcop/meshcop.hpp>
-#include <meshcop/tlvs.hpp>
-#include <thread/mle.hpp>
-#include <thread/thread_netif.hpp>
-#include <thread/thread_uris.hpp>
+#include "common/code_utils.hpp"
+#include "common/encoding.hpp"
+#include "common/logging.hpp"
+#include "meshcop/meshcop.hpp"
+#include "meshcop/meshcop_tlvs.hpp"
+#include "thread/mle.hpp"
+#include "thread/thread_netif.hpp"
+#include "thread/thread_uris.hpp"
 
-using Thread::Encoding::BigEndian::HostSwap16;
-using Thread::Encoding::BigEndian::HostSwap64;
+using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap64;
 
-namespace Thread {
+namespace ot {
 namespace MeshCoP {
 
 JoinerRouter::JoinerRouter(ThreadNetif &aNetif):
@@ -69,7 +70,7 @@ JoinerRouter::JoinerRouter(ThreadNetif &aNetif):
     mExpectJoinEntRsp(false)
 {
     mSocket.GetSockName().mPort = OPENTHREAD_CONFIG_JOINER_UDP_PORT;
-    mNetif.GetCoapServer().AddResource(mRelayTransmit);
+    mNetif.GetCoap().AddResource(mRelayTransmit);
     mNetifCallback.Set(HandleNetifStateChanged, this);
     mNetif.RegisterCallback(mNetifCallback);
 }
@@ -91,7 +92,7 @@ void JoinerRouter::HandleNetifStateChanged(uint32_t aFlags)
 
     mNetif.GetIp6Filter().RemoveUnsecurePort(mSocket.GetSockName().mPort);
 
-    if (mNetif.GetNetworkDataLeader().GetCommissioningData() != NULL)
+    if (mNetif.GetNetworkDataLeader().IsJoiningEnabled())
     {
         Ip6::SockAddr sockaddr;
 
@@ -182,8 +183,7 @@ void JoinerRouter::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &a
     header.AppendUriPathOptions(OPENTHREAD_URI_RELAY_RX);
     header.SetPayloadMarker();
 
-    VerifyOrExit((message = NewMeshCoPMessage(mNetif.GetCoapClient(), header)) != NULL,
-                 error = kThreadError_NoBufs);
+    VerifyOrExit((message = NewMeshCoPMessage(mNetif.GetCoap(), header)) != NULL, error = kThreadError_NoBufs);
 
     udpPort.Init();
     udpPort.SetUdpPort(aMessageInfo.GetPeerPort());
@@ -217,11 +217,12 @@ void JoinerRouter::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &a
         SuccessOrExit(error = message->Append(tmp, length));
     }
 
+    messageInfo.SetSockAddr(mNetif.GetMle().GetMeshLocal16());
     messageInfo.SetPeerAddr(mNetif.GetMle().GetMeshLocal16());
     messageInfo.GetPeerAddr().mFields.m16[7] = HostSwap16(borderAgentRloc);
     messageInfo.SetPeerPort(kCoapUdpPort);
 
-    SuccessOrExit(error = mNetif.GetCoapClient().SendMessage(*message, messageInfo));
+    SuccessOrExit(error = mNetif.GetCoap().SendMessage(*message, messageInfo));
 
     otLogInfoMeshCoP(GetInstance(), "Sent relay rx");
 
@@ -340,12 +341,11 @@ ThreadError JoinerRouter::DelaySendingJoinerEntrust(const Ip6::MessageInfo &aMes
     header.AppendUriPathOptions(OPENTHREAD_URI_JOINER_ENTRUST);
     header.SetPayloadMarker();
 
-    VerifyOrExit((message = NewMeshCoPMessage(mNetif.GetCoapClient(), header)) != NULL,
-                 error = kThreadError_NoBufs);
+    VerifyOrExit((message = NewMeshCoPMessage(mNetif.GetCoap(), header)) != NULL, error = kThreadError_NoBufs);
     message->SetSubType(Message::kSubTypeJoinerEntrust);
 
     masterKey.Init();
-    masterKey.SetNetworkMasterKey(mNetif.GetKeyManager().GetMasterKey(NULL));
+    masterKey.SetNetworkMasterKey(mNetif.GetKeyManager().GetMasterKey());
     SuccessOrExit(error = message->Append(&masterKey, sizeof(masterKey)));
 
     meshLocalPrefix.Init();
@@ -490,11 +490,11 @@ ThreadError JoinerRouter::SendJoinerEntrust(Message &aMessage, const Ip6::Messag
 {
     ThreadError error;
 
-    mNetif.GetCoapClient().AbortTransaction(&JoinerRouter::HandleJoinerEntrustResponse, this);
+    mNetif.GetCoap().AbortTransaction(&JoinerRouter::HandleJoinerEntrustResponse, this);
 
     otLogInfoMeshCoP(GetInstance(), "Sending JOIN_ENT.ntf");
-    SuccessOrExit(error = mNetif.GetCoapClient().SendMessage(aMessage, aMessageInfo,
-                                                             &JoinerRouter::HandleJoinerEntrustResponse, this));
+    SuccessOrExit(error = mNetif.GetCoap().SendMessage(aMessage, aMessageInfo,
+                                                       &JoinerRouter::HandleJoinerEntrustResponse, this));
 
     otLogInfoMeshCoP(GetInstance(), "Sent joiner entrust length = %d", aMessage.GetLength());
     otLogCertMeshCoP(GetInstance(), "[THCI] direction=send | type=JOIN_ENT.ntf");
@@ -534,7 +534,7 @@ exit:
 }
 
 }  // namespace Dtls
-}  // namespace Thread
+}  // namespace ot
 
 #endif // OPENTHREAD_FTD
 

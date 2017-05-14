@@ -26,13 +26,16 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "test_util.h"
-#include "openthread/openthread.h"
-#include <common/debug.hpp>
-#include <mac/mac_frame.hpp>
-#include <string.h>
+#include "utils/wrap_string.h"
 
-namespace Thread {
+#include <openthread/openthread.h>
+
+#include "common/debug.hpp"
+#include "mac/mac_frame.hpp"
+
+#include "test_util.h"
+
+namespace ot {
 
 void TestMacHeader(void)
 {
@@ -82,12 +85,12 @@ void TestMacHeader(void)
     }
 }
 
-}  // namespace Thread
+}  // namespace ot
 
 #ifdef ENABLE_TEST_MAIN
 int main(void)
 {
-    Thread::TestMacHeader();
+    ot::TestMacHeader();
     printf("All tests passed\n");
     return 0;
 }

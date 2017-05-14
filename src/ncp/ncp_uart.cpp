@@ -36,22 +36,24 @@
 #include <openthread-config.h>
 #endif
 
-#include "openthread/ncp.h"
-#include "openthread/platform/logging.h"
-#include "openthread/platform/uart.h"
+#include "ncp_uart.hpp"
 
 #include <stdio.h>
-#include <common/code_utils.hpp>
-#include <common/new.hpp>
-#include <common/debug.hpp>
-#include <net/ip6.hpp>
-#include <ncp/ncp_uart.hpp>
-#include <core/openthread-core-config.h>
-#include <openthread-instance.h>
+
+#include <openthread/ncp.h>
+#include <openthread/platform/logging.h>
+#include <openthread/platform/uart.h>
+
+#include "openthread-core-config.h"
+#include "openthread-instance.h"
+#include "common/code_utils.hpp"
+#include "common/new.hpp"
+#include "common/debug.hpp"
+#include "net/ip6.hpp"
 
 #if OPENTHREAD_ENABLE_NCP_UART
 
-namespace Thread {
+namespace ot {
 
 static otDEFINE_ALIGNED_VAR(sNcpRaw, sizeof(NcpUart), uint64_t);
 
@@ -295,6 +297,6 @@ void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat
 #endif
 #endif // OPENTHREAD_ENABLE_CLI_LOGGING
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif // OPENTHREAD_ENABLE_NCP_UART

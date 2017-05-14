@@ -34,11 +34,11 @@
 #ifndef TCP_HPP_
 #define TCP_HPP_
 
-#include "openthread/openthread.h"
+#include <openthread/openthread.h>
 
-#include <net/ip6_headers.hpp>
+#include "net/ip6_headers.hpp"
 
-namespace Thread {
+namespace ot {
 namespace Ip6 {
 
 /**
@@ -144,6 +144,6 @@ public:
  */
 
 }  // namespace Ip6
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // TCP_HPP_

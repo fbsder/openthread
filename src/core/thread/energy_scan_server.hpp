@@ -34,17 +34,15 @@
 #ifndef ENERGY_SCAN_SERVER_HPP_
 #define ENERGY_SCAN_SERVER_HPP_
 
-#include <openthread-core-config.h>
+#include <openthread/types.h>
 
-#include "openthread/types.h"
+#include "openthread-core-config.h"
+#include "coap/coap.hpp"
+#include "common/timer.hpp"
+#include "net/ip6_address.hpp"
+#include "net/udp6.hpp"
 
-#include <coap/coap_client.hpp>
-#include <coap/coap_server.hpp>
-#include <common/timer.hpp>
-#include <net/ip6_address.hpp>
-#include <net/udp6.hpp>
-
-namespace Thread {
+namespace ot {
 
 class MeshForwarder;
 class ThreadLastTransactionTimeTlv;
@@ -119,6 +117,6 @@ private:
  * @}
  */
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // ENERGY_SCAN_SERVER_HPP_

@@ -34,15 +34,12 @@
 #ifndef ANNOUNCE_BEGIN_CLIENT_HPP_
 #define ANNOUNCE_BEGIN_CLIENT_HPP_
 
-#include <openthread-core-config.h>
+#include "openthread-core-config.h"
+#include "coap/coap.hpp"
+#include "net/ip6_address.hpp"
+#include "net/udp6.hpp"
 
-#include "openthread/commissioner.h"
-
-#include <coap/coap_client.hpp>
-#include <net/ip6_address.hpp>
-#include <net/udp6.hpp>
-
-namespace Thread {
+namespace ot {
 
 class ThreadNetif;
 
@@ -88,6 +85,6 @@ private:
  * @}
  */
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // ANNOUNCE_BEGIN_CLIENT_HPP_

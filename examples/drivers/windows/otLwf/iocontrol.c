@@ -140,6 +140,7 @@ OTLWF_IOCTL_HANDLER IoCtls[] =
     { "IOCTL_OTLWF_OT_FACTORY_RESET",               REF_IOCTL_FUNC(otFactoryReset) },
     { "IOCTL_OTLWF_OT_THREAD_AUTO_START",           REF_IOCTL_FUNC(otThreadAutoStart) },
     { "IOCTL_OTLWF_OT_PREFERRED_ROUTER_ID",         REF_IOCTL_FUNC(otThreadPreferredRouterId) },
+    { "IOCTL_OTLWF_OT_PSKC",                        REF_IOCTL_FUNC_WITH_TUN(otPSKc) },
 };
 
 static_assert(ARRAYSIZE(IoCtls) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE) + 1,
@@ -904,15 +905,19 @@ otLwfIoCtl_otDiscover(
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
 
-    if (InBufferLength >= sizeof(uint32_t) + sizeof(uint16_t))
+    if (InBufferLength >= sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool))
     {
         uint32_t aScanChannels = *(uint32_t*)InBuffer;
         uint16_t aPanid = *(uint16_t*)(InBuffer + sizeof(uint32_t));
+        bool aJoiner = *(uint8_t*)(InBuffer + sizeof(uint32_t) + sizeof(uint16_t));
+        bool aEnableEui64Filtering = *(uint8_t*)(InBuffer + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint8_t));
         status = ThreadErrorToNtstatus(
             otThreadDiscover(
                 pFilter->otCtx, 
                 aScanChannels, 
                 aPanid,
+                aJoiner,
+                aEnableEui64Filtering,
                 otLwfDiscoverCallback,
                 pFilter)
             );
@@ -1627,19 +1632,16 @@ otLwfIoCtl_otMasterKey(
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
 
-    if (InBufferLength >= sizeof(otMasterKey) + sizeof(uint8_t))
+    if (InBufferLength >= sizeof(otMasterKey))
     {
-        uint8_t aKeyLength = *(uint8_t*)(InBuffer + sizeof(otMasterKey));
-        status = ThreadErrorToNtstatus(otThreadSetMasterKey(pFilter->otCtx, InBuffer, aKeyLength));
+        status = ThreadErrorToNtstatus(otThreadSetMasterKey(pFilter->otCtx, (otMasterKey*)InBuffer));
         *OutBufferLength = 0;
     }
-    else if (*OutBufferLength >= sizeof(otMasterKey) + sizeof(uint8_t))
+    else if (*OutBufferLength >= sizeof(otMasterKey))
     {
-        uint8_t aKeyLength = 0;
-        const uint8_t* aMasterKey = otThreadGetMasterKey(pFilter->otCtx, &aKeyLength);
-        memcpy(OutBuffer, aMasterKey, aKeyLength);
-        memcpy((PUCHAR)OutBuffer + sizeof(otMasterKey), &aKeyLength, sizeof(uint8_t));
-        *OutBufferLength = sizeof(otMasterKey) + sizeof(uint8_t);
+        const otMasterKey* aMasterKey = otThreadGetMasterKey(pFilter->otCtx);
+        memcpy(OutBuffer, aMasterKey, sizeof(otMasterKey));
+        *OutBufferLength = sizeof(otMasterKey);
         status = STATUS_SUCCESS;
     }
     else
@@ -1663,10 +1665,8 @@ otLwfTunIoCtl_otMasterKey(
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
 
-    if (InBufferLength >= sizeof(otMasterKey) + sizeof(uint8_t))
+    if (InBufferLength >= sizeof(otMasterKey))
     {
-        spinel_size_t aKeyLength = *(uint8_t*)(InBuffer + sizeof(otMasterKey));
-
         status = 
             otLwfTunSendCommandForIrp(
                 pFilter,
@@ -1677,9 +1677,9 @@ otLwfTunIoCtl_otMasterKey(
                 sizeof(otMasterKey) + sizeof(uint16_t),
                 SPINEL_DATATYPE_DATA_S,
                 (otMasterKey*)InBuffer,
-                aKeyLength);
+                sizeof(otMasterKey));
     }
-    else if (OutBufferLength >= sizeof(otMasterKey) + sizeof(uint8_t))
+    else if (OutBufferLength >= sizeof(otMasterKey))
     {
         status = 
             otLwfTunSendCommandForIrp(
@@ -1712,11 +1712,114 @@ otLwfTunIoCtl_otMasterKey_Handler(
         uint8_t *data = NULL;
         spinel_size_t aKeyLength; 
         if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_DATA_S, &data, &aKeyLength) && data != NULL && 
-            aKeyLength <= sizeof(otMasterKey))
+            aKeyLength == sizeof(otMasterKey))
         {
-            memcpy(OutBuffer, data, aKeyLength);
-            *(uint8_t*)((PUCHAR)OutBuffer + sizeof(otMasterKey)) = (uint8_t)aKeyLength;
-            *OutBufferLength = sizeof(otMasterKey) + sizeof(uint8_t);
+            memcpy(OutBuffer, data, sizeof(otMasterKey));
+            *OutBufferLength = sizeof(otMasterKey);
+            status = STATUS_SUCCESS;
+        }
+    }
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otPSKc(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(otPSKc))
+    {
+        status = ThreadErrorToNtstatus(otThreadSetPSKc(pFilter->otCtx, InBuffer));
+        *OutBufferLength = 0;
+    }
+    else if (*OutBufferLength >= sizeof(otPSKc))
+    {
+        const uint8_t* aPSKc = otThreadGetPSKc(pFilter->otCtx);
+        memcpy(OutBuffer, aPSKc, sizeof(otPSKc));
+        *OutBufferLength = sizeof(otPSKc);
+        status = STATUS_SUCCESS;
+    }
+    else
+    {
+        *OutBufferLength = 0;
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otPSKc(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(otPSKc))
+    {
+        status = 
+            otLwfTunSendCommandForIrp(
+                pFilter,
+                pIrp,
+                NULL,
+                SPINEL_CMD_PROP_VALUE_SET,
+                SPINEL_PROP_NET_PSKC,
+                sizeof(otPSKc) + sizeof(uint16_t),
+                SPINEL_DATATYPE_DATA_S,
+                (otPSKc*)InBuffer,
+                OT_PSKC_MAX_SIZE);
+    }
+    else if (OutBufferLength >= sizeof(otPSKc))
+    {
+        status = 
+            otLwfTunSendCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otPSKc_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_NET_PSKC,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otPSKc_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_NET_PSKC)
+    {
+        uint8_t *data = NULL;
+        spinel_size_t aPSKcLength; 
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_DATA_S, &data, &aPSKcLength) && data != NULL && 
+            aPSKcLength == sizeof(otPSKc))
+        {
+            memcpy(OutBuffer, data, sizeof(otPSKc));
+            *OutBufferLength = sizeof(otPSKc);
             status = STATUS_SUCCESS;
         }
     }

@@ -39,21 +39,22 @@
 #include <openthread-config.h>
 #endif
 
-#include "openthread/platform/random.h"
+#include "announce_begin_client.hpp"
 
-#include <coap/coap_header.hpp>
-#include <common/code_utils.hpp>
-#include <common/debug.hpp>
-#include <common/logging.hpp>
-#include <meshcop/announce_begin_client.hpp>
-#include <meshcop/meshcop.hpp>
-#include <meshcop/tlvs.hpp>
-#include <thread/thread_netif.hpp>
-#include <thread/thread_uris.hpp>
+#include <openthread/platform/random.h>
+
+#include "coap/coap_header.hpp"
+#include "common/code_utils.hpp"
+#include "common/debug.hpp"
+#include "common/logging.hpp"
+#include "meshcop/meshcop.hpp"
+#include "meshcop/meshcop_tlvs.hpp"
+#include "thread/thread_netif.hpp"
+#include "thread/thread_uris.hpp"
 
 #if OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
 
-namespace Thread {
+namespace ot {
 
 AnnounceBeginClient::AnnounceBeginClient(ThreadNetif &aThreadNetif) :
     mNetif(aThreadNetif)
@@ -76,7 +77,9 @@ ThreadError AnnounceBeginClient::SendRequest(uint32_t aChannelMask, uint8_t aCou
     MeshCoP::PeriodTlv period;
 
     Ip6::MessageInfo messageInfo;
-    Message *message;
+    Message *message = NULL;
+
+    VerifyOrExit(mNetif.GetCommissioner().GetState() == kCommissionerStateActive, error = kThreadError_InvalidState);
 
     header.Init(aAddress.IsMulticast() ? kCoapTypeNonConfirmable : kCoapTypeConfirmable,
                 kCoapRequestPost);
@@ -84,7 +87,7 @@ ThreadError AnnounceBeginClient::SendRequest(uint32_t aChannelMask, uint8_t aCou
     header.AppendUriPathOptions(OPENTHREAD_URI_ANNOUNCE_BEGIN);
     header.SetPayloadMarker();
 
-    VerifyOrExit((message = MeshCoP::NewMeshCoPMessage(mNetif.GetCoapClient(), header)) != NULL,
+    VerifyOrExit((message = MeshCoP::NewMeshCoPMessage(mNetif.GetCoap(), header)) != NULL,
                  error = kThreadError_NoBufs);
 
     sessionId.Init();
@@ -103,11 +106,12 @@ ThreadError AnnounceBeginClient::SendRequest(uint32_t aChannelMask, uint8_t aCou
     period.SetPeriod(aPeriod);
     SuccessOrExit(error = message->Append(&period, sizeof(period)));
 
+    messageInfo.SetSockAddr(mNetif.GetMle().GetMeshLocal16());
     messageInfo.SetPeerAddr(aAddress);
     messageInfo.SetPeerPort(kCoapUdpPort);
     messageInfo.SetInterfaceId(mNetif.GetInterfaceId());
 
-    SuccessOrExit(error = mNetif.GetCoapClient().SendMessage(*message, messageInfo));
+    SuccessOrExit(error = mNetif.GetCoap().SendMessage(*message, messageInfo));
 
     otLogInfoMeshCoP(GetInstance(), "sent announce begin query");
 
@@ -121,7 +125,7 @@ exit:
     return error;
 }
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif // OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
 

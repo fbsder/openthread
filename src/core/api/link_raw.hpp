@@ -34,8 +34,10 @@
 #ifndef LINK_RAW_HPP_
 #define LINK_RAW_HPP_
 
-#include <openthread-core-config.h>
-#include "openthread/link_raw.h"
+#include <openthread/link_raw.h>
+
+#include "openthread-core-config.h"
+#include "common/timer.hpp"
 
 #if OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ACK_TIMEOUT || OPENTHREAD_CONFIG_ENABLE_SOFTWARE_RETRANSMIT || OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ENERGY_SCAN
 #define OPENTHREAD_LINKRAW_TIMER_REQUIRED 1
@@ -43,7 +45,7 @@
 #define OPENTHREAD_LINKRAW_TIMER_REQUIRED 0
 #endif
 
-namespace Thread {
+namespace ot {
 
 class LinkRaw
 {
@@ -162,6 +164,6 @@ private:
 #endif // OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ENERGY_SCAN
 };
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // LINK_RAW_HPP_

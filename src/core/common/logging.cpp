@@ -39,13 +39,13 @@
 #include <openthread-config.h>
 #endif
 
-#include "openthread/openthread.h"
+#include "logging.hpp"
 
-#include <common/logging.hpp>
+#include <openthread/openthread.h>
 
 #ifndef WINDOWS_LOGGING
 #define otLogDump(aFormat, ...)                                             \
-    _otPlatLog(aInstance, aLogLevel, aLogRegion, aFormat OPENTHREAD_CONFIG_LOG_SUFFIX, ## __VA_ARGS__)
+    _otDynamicLog(aInstance, aLogLevel, aLogRegion, aFormat OPENTHREAD_CONFIG_LOG_SUFFIX, ## __VA_ARGS__)
 #endif
 
 #ifdef __cplusplus
@@ -208,6 +208,10 @@ const char *otLogRegionToString(otLogRegion aRegion)
 
     case kLogRegionMle:
         retval = "-MLE-----";
+        break;
+
+    case kLogRegionCoap:
+        retval = "-COAP----";
         break;
 
     case kLogRegionArp:
@@ -391,6 +395,22 @@ const char *otThreadErrorToString(ThreadError aError)
 
     case kThreadError_Duplicated:
         retval = "Duplicated";
+        break;
+
+    case kThreadError_ReassemblyTimeout:
+        retval = "ReassemblyTimeout";
+        break;
+
+    case kThreadError_NotTmf:
+        retval = "NotTmf";
+        break;
+
+    case kThreadError_NonLowpanDataFrame:
+        retval = "NonLowpanDataFrame";
+        break;
+
+    case kThreadError_DisabledFeature:
+        retval = "DisabledFeature";
         break;
 
     case kThreadError_Error:

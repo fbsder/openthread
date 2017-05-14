@@ -34,18 +34,17 @@
 #ifndef MAC_FRAME_HPP_
 #define MAC_FRAME_HPP_
 
-#include <openthread-core-config.h>
-
 #include <limits.h>
-#include <stdint.h>
-#include <string.h>
+#include "utils/wrap_stdint.h"
+#include "utils/wrap_string.h"
 
-#include "openthread/types.h"
-#include "openthread/platform/radio.h"
+#include <openthread/types.h>
+#include <openthread/platform/radio.h>
 
-#include <common/encoding.hpp>
+#include "openthread-core-config.h"
+#include "common/encoding.hpp"
 
-namespace Thread {
+namespace ot {
 
 namespace Ip6 { class Address; }
 
@@ -784,7 +783,7 @@ public:
      *
      */
     void Init(void) {
-        mSuperframeSpec = Thread::Encoding::LittleEndian::HostSwap16(kSuperFrameSpec);
+        mSuperframeSpec = ot::Encoding::LittleEndian::HostSwap16(kSuperFrameSpec);
         mGtsSpec = 0;
         mPendingAddressSpec = 0;
     }
@@ -797,7 +796,7 @@ public:
      *
      */
     bool IsValid(void) {
-        return (mSuperframeSpec == Thread::Encoding::LittleEndian::HostSwap16(kSuperFrameSpec)) &&
+        return (mSuperframeSpec == ot::Encoding::LittleEndian::HostSwap16(kSuperFrameSpec)) &&
                (mGtsSpec == 0) && (mPendingAddressSpec == 0);
     }
 
@@ -985,6 +984,6 @@ private:
  */
 
 }  // namespace Mac
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // MAC_FRAME_HPP_

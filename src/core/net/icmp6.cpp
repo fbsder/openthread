@@ -39,18 +39,19 @@
 #include <openthread-config.h>
 #endif
 
-#include <string.h>
+#include "icmp6.hpp"
 
-#include <common/code_utils.hpp>
-#include <common/debug.hpp>
-#include <common/logging.hpp>
-#include <common/message.hpp>
-#include <net/icmp6.hpp>
-#include <net/ip6.hpp>
+#include "utils/wrap_string.h"
 
-using Thread::Encoding::BigEndian::HostSwap16;
+#include "common/code_utils.hpp"
+#include "common/debug.hpp"
+#include "common/logging.hpp"
+#include "common/message.hpp"
+#include "net/ip6.hpp"
 
-namespace Thread {
+using ot::Encoding::BigEndian::HostSwap16;
+
+namespace ot {
 namespace Ip6 {
 
 Icmp::Icmp(Ip6 &aIp6):
@@ -155,14 +156,15 @@ ThreadError Icmp::HandleMessage(Message &aMessage, MessageInfo &aMessageInfo)
     IcmpHeader icmp6Header;
     uint16_t checksum;
 
-    VerifyOrExit(aMessage.Read(aMessage.GetOffset(), sizeof(icmp6Header), &icmp6Header) == sizeof(icmp6Header));
+    VerifyOrExit(aMessage.Read(aMessage.GetOffset(), sizeof(icmp6Header), &icmp6Header) == sizeof(icmp6Header),
+                 error = kThreadError_Parse);
     payloadLength = aMessage.GetLength() - aMessage.GetOffset();
 
     // verify checksum
     checksum = Ip6::ComputePseudoheaderChecksum(aMessageInfo.GetPeerAddr(), aMessageInfo.GetSockAddr(),
                                                 payloadLength, kProtoIcmp6);
     checksum = aMessage.UpdateChecksum(checksum, aMessage.GetOffset(), payloadLength);
-    VerifyOrExit(checksum == 0xffff);
+    VerifyOrExit(checksum == 0xffff, error = kThreadError_Parse);
 
     if (mIsEchoEnabled && (icmp6Header.GetType() == kIcmp6TypeEchoRequest))
     {
@@ -246,4 +248,4 @@ ThreadError Icmp::UpdateChecksum(Message &aMessage, uint16_t aChecksum)
 }
 
 }  // namespace Ip6
-}  // namespace Thread
+}  // namespace ot

@@ -27,14 +27,17 @@
  */
 
 #include <ctype.h>
-#include "test_util.h"
-#include "openthread/openthread.h"
-#include <openthread-instance.h>
-#include <common/code_utils.hpp>
-#include <common/message.hpp>
-#include <ncp/ncp_buffer.hpp>
 
-namespace Thread {
+#include <openthread/openthread.h>
+
+#include "openthread-instance.h"
+#include "common/code_utils.hpp"
+#include "common/message.hpp"
+#include "ncp/ncp_buffer.hpp"
+
+#include "test_util.h"
+
+namespace ot {
 
 // This module implements unit-test for NcpFrameBuffer class.
 
@@ -461,12 +464,12 @@ void TestNcpFrameBuffer(void)
     printf("\n -- PASS\n");
 }
 
-}  // namespace Thread
+}  // namespace ot
 
 #ifdef ENABLE_TEST_MAIN
 int main(void)
 {
-    Thread::TestNcpFrameBuffer();
+    ot::TestNcpFrameBuffer();
     printf("\nAll tests passed.\n");
     return 0;
 }

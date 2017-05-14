@@ -31,11 +31,11 @@
  *   This file implements the OpenThread Link API.
  */
 
-#include "openthread/link.h"
+#include <openthread/link.h>
 
 #include "openthread-instance.h"
 
-using namespace Thread;
+using namespace ot;
 
 static void HandleActiveScanResult(void *aContext, Mac::Frame *aFrame);
 static void HandleEnergyScanResult(void *aContext, otEnergyScanResult *aResult);

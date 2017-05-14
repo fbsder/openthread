@@ -28,15 +28,15 @@
 
 /**
  * @file
- *   This file implements the OpenThread UDP API.
+ *   This file implements the OpenThread DHCPv6 API.
  */
 
-#include "openthread/dhcp6_client.h"
-#include "openthread/dhcp6_server.h"
+#include <openthread/dhcp6_client.h>
+#include <openthread/dhcp6_server.h>
 
 #include "openthread-instance.h"
 
-using namespace Thread;
+using namespace ot;
 
 #if OPENTHREAD_ENABLE_DHCP6_CLIENT
 void otDhcp6ClientUpdate(otInstance *aInstance, otDhcpAddress *aAddresses, uint32_t aNumAddresses, void *aContext)

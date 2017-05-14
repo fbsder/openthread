@@ -34,20 +34,19 @@
 #ifndef MAC_HPP_
 #define MAC_HPP_
 
-#include "openthread/platform/radio.h"
+#include <openthread/platform/radio.h>
 
-#include <openthread-core-config.h>
+#include "openthread-core-config.h"
+#include "common/tasklet.hpp"
+#include "common/timer.hpp"
+#include "mac/mac_blacklist.hpp"
+#include "mac/mac_frame.hpp"
+#include "mac/mac_whitelist.hpp"
+#include "thread/key_manager.hpp"
+#include "thread/network_diagnostic_tlvs.hpp"
+#include "thread/topology.hpp"
 
-#include <common/tasklet.hpp>
-#include <common/timer.hpp>
-#include <mac/mac_frame.hpp>
-#include <mac/mac_whitelist.hpp>
-#include <mac/mac_blacklist.hpp>
-#include <thread/key_manager.hpp>
-#include <thread/topology.hpp>
-#include <thread/network_diagnostic_tlvs.hpp>
-
-namespace Thread {
+namespace ot {
 
 namespace Mle { class MleRouter; }
 
@@ -349,6 +348,14 @@ public:
     ThreadError SendFrameRequest(Sender &aSender);
 
     /**
+     * This method generates a random IEEE 802.15.4 Extended Address.
+     *
+     * @param[out]  aExtAddress  A pointer to where the generated Extended Address is placed.
+     *
+     */
+    void GenerateExtAddress(ExtAddress *aExtAddress);
+
+    /**
      * This method returns a pointer to the IEEE 802.15.4 Extended Address.
      *
      * @returns A pointer to the IEEE 802.15.4 Extended Address.
@@ -593,12 +600,12 @@ public:
     otMacCounters &GetCounters(void) { return mCounters; }
 
     /**
-     * This method returns the noise floor state.
+     * This method returns the noise floor value (currently use the radio receive sensitivity value).
      *
-     * @returns A reference to the noise floor state.
+     * @returns The noise floor value in dBm.
      *
      */
-    LinkQualityInfo &GetNoiseFloor(void) { return mNoiseFloor; }
+    int8_t GetNoiseFloor(void) { return otPlatRadioGetReceiveSensitivity(GetInstance()); }
 
     /**
      * This method indicates whether or not CSMA backoff is supported by the radio layer.
@@ -706,8 +713,6 @@ private:
     int8_t mEnergyScanCurrentMaxRssi;
     Tasklet mEnergyScanSampleRssiTask;
 
-    LinkQualityInfo mNoiseFloor;
-
     otLinkPcapCallback mPcapCallback;
     void *mPcapCallbackContext;
 
@@ -726,6 +731,6 @@ private:
  */
 
 }  // namespace Mac
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // MAC_HPP_

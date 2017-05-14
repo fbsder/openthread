@@ -34,15 +34,16 @@
 #ifndef TOPOLOGY_HPP_
 #define TOPOLOGY_HPP_
 
-#include <openthread-core-config.h>
 #include <openthread/platform/random.h>
-#include <mac/mac_frame.hpp>
-#include <net/ip6.hpp>
-#include <thread/mle_tlvs.hpp>
-#include <thread/link_quality.hpp>
-#include <common/message.hpp>
 
-namespace Thread {
+#include "openthread-core-config.h"
+#include "common/message.hpp"
+#include "mac/mac_frame.hpp"
+#include "net/ip6.hpp"
+#include "thread/link_quality.hpp"
+#include "thread/mle_tlvs.hpp"
+
+namespace ot {
 
 /**
  * This class represents a Thread neighbor.
@@ -86,19 +87,10 @@ public:
      * Check if the neighbor/child is in valid state or if it is being restored.
      * When in these states messages can be sent to and/or received from the neighbor/child.
      *
-     * @returns `true` if the neighbor is in valid, restored, or being restored states, `false` otherwise.
+     * @returns TRUE if the neighbor is in valid, restored, or being restored states, FALSE otherwise.
      *
      */
-    bool IsStateValidOrRestoring(void) const {
-        switch (mState) {
-        case kStateValid:
-        case kStateRestored:
-            return true;
-
-        default:
-            return false;
-        }
-    }
+    bool IsStateValidOrRestoring(void) const { return (mState == kStateValid) || (mState == kStateRestored); }
 
     /**
      * This method gets the device mode flags.
@@ -216,7 +208,7 @@ public:
      * @returns The link frame counter value.
      *
      */
-    uint32_t GetLinkFrameCounter(void) const { return mValid.mLinkFrameCounter; }
+    uint32_t GetLinkFrameCounter(void) const { return mValidPending.mValid.mLinkFrameCounter; }
 
     /**
      * This method sets the link frame counter value.
@@ -224,7 +216,7 @@ public:
      * @param[in]  aFrameCounter  The link frame counter value.
      *
      */
-    void SetLinkFrameCounter(uint32_t aFrameCounter) { mValid.mLinkFrameCounter = aFrameCounter; }
+    void SetLinkFrameCounter(uint32_t aFrameCounter) { mValidPending.mValid.mLinkFrameCounter = aFrameCounter; }
 
     /**
      * This method gets the MLE frame counter value.
@@ -232,7 +224,7 @@ public:
      * @returns The MLE frame counter value.
      *
      */
-    uint32_t GetMleFrameCounter(void) const { return mValid.mMleFrameCounter; }
+    uint32_t GetMleFrameCounter(void) const { return mValidPending.mValid.mMleFrameCounter; }
 
     /**
      * This method sets the MLE frame counter value.
@@ -240,7 +232,7 @@ public:
      * @param[in]  aFrameCounter  The MLE frame counter value.
      *
      */
-    void SetMleFrameCounter(uint32_t aFrameCounter) { mValid.mMleFrameCounter = aFrameCounter; }
+    void SetMleFrameCounter(uint32_t aFrameCounter) { mValidPending.mValid.mMleFrameCounter = aFrameCounter; }
 
     /**
      * This method gets the RLOC16 value.
@@ -248,7 +240,7 @@ public:
      * @returns The RLOC16 value.
      *
      */
-    uint16_t GetRloc16(void) const { return mValid.mRloc16; }
+    uint16_t GetRloc16(void) const { return mValidPending.mValid.mRloc16; }
 
     /**
      * This method sets the RLOC16 value.
@@ -256,7 +248,7 @@ public:
      * @param[in]  aRloc16  The RLOC16 value.
      *
      */
-    void SetRloc16(uint16_t aRloc16) { mValid.mRloc16 = aRloc16; }
+    void SetRloc16(uint16_t aRloc16) { mValidPending.mValid.mRloc16 = aRloc16; }
 
     /**
      * This method indicates whether an IEEE 802.15.4 Data Request message was received.
@@ -306,11 +298,7 @@ public:
      * This method generates a new challenge value for MLE Link Request/Response exchanges.
      *
      */
-    void GenerateChallenge(void) {
-        for (uint8_t i = 0; i < sizeof(mPending.mChallenge); i++) {
-            mPending.mChallenge[i] = static_cast<uint8_t>(otPlatRandomGet());
-        }
-    }
+    void GenerateChallenge(void);
 
     /**
      * This method returns the current challenge value for MLE Link Request/Response exchanges.
@@ -318,7 +306,7 @@ public:
      * @returns The current challenge value.
      *
      */
-    const uint8_t *GetChallenge(void) const { return mPending.mChallenge; }
+    const uint8_t *GetChallenge(void) const { return mValidPending.mPending.mChallenge; }
 
     /**
      * This method returns the size (byets) of the challenge value for MLE Link Request/Response exchanges.
@@ -326,7 +314,7 @@ public:
      * @returns The size (byets) of the challenge value for MLE Link Request/Response exchanges.
      *
      */
-    uint8_t GetChallengeSize(void) const { return sizeof(mPending.mChallenge); }
+    uint8_t GetChallengeSize(void) const { return sizeof(mValidPending.mPending.mChallenge); }
 
 private:
     Mac::ExtAddress mMacAddr;            ///< The IEEE 802.15.4 Extended Address
@@ -344,7 +332,7 @@ private:
             uint8_t mChallenge[Mle::ChallengeTlv::kMaxSize];  ///< The challenge value
             uint8_t mChallengeLength;    ///< The challenge length
         } mPending;
-    };
+    } mValidPending;
 
     uint32_t        mKeySequence;        ///< Current key sequence
     uint8_t         mState : 3;          ///< The link state
@@ -360,8 +348,6 @@ private:
  */
 class Child : public Neighbor
 {
-    friend class SourceMatchController;
-
 public:
     enum
     {
@@ -384,6 +370,28 @@ public:
      *
      */
     Ip6::Address &GetIp6Address(uint8_t aIndex) { return mIp6Address[aIndex]; }
+
+    /**
+     * This method searches for a given IPv6 address in the child's IPv6 address list and provides the index of the
+     * address in the list if it is found.
+     *
+     * @param[in]  aAddress           The IPv6 address to search for in the IPv6 address list.
+     * @param[out] aIndex             Pointer to variable where the index of address is provided if address is found in
+     *                                the list. @p aIndex can be set NULL if index is not required.
+     *
+     * @retval kThreadError_None      Successfully found the address in IPv6 address list and updated @p aIndex.
+     * @retval kThreadError_NotFound  Could not find the address in the list.
+     *
+     */
+    ThreadError FindIp6Address(const Ip6::Address &aAddress, uint8_t *aIndex) const;
+
+    /**
+     * This method removes the address at index @p aIndex.
+     *
+     * @param[in] aIndex   The index into the IPv6 address list.
+     *
+     */
+    void RemoveIp6Address(uint8_t aIndex);
 
     /**
      * This method gets the child timeout.
@@ -421,11 +429,7 @@ public:
      * This method generates a new challenge value to use during a child attach.
      *
      */
-    void GenerateChallenge(void) {
-        for (uint8_t i = 0; i < sizeof(mAttachChallenge); i++) {
-            mAttachChallenge[i] = static_cast<uint8_t>(otPlatRandomGet());
-        }
-    }
+    void GenerateChallenge(void);
 
     /**
      * This method gets the current challenge value used during attach.
@@ -544,7 +548,7 @@ public:
     void SetIndirectDataSequenceNumber(uint8_t aDsn) { mIndirectDsn = aDsn; }
 
     /**
-     * This method indicates whether or not to source match on the source address.
+     * This method indicates whether or not to source match on the short address.
      *
      * @returns TRUE if using the short address, FALSE if using the extended address.
      *
@@ -552,7 +556,7 @@ public:
     bool IsIndirectSourceMatchShort(void) const { return mUseShortAddress; }
 
     /**
-     * This method sets whether or not to source match on the source address.
+     * This method sets whether or not to source match on the short address.
      *
      * @param[in]  aShort  TRUE if using the short address, FALSE if using the extended address.
      *
@@ -626,6 +630,40 @@ public:
      */
     void SetRequestTlv(uint8_t aIndex, uint8_t aType) { mRequestTlvs[aIndex] = aType; }
 
+    /**
+     * This method gets the mac address of child (either rloc16 or extended address depending on `UseShortAddress` flag).
+     *
+     * @param[out] aMacAddress A reference to a mac address object to which the child's address is copied.
+     *
+     * @returns A (const) reference to the mac address @a aMacAddress.
+     *
+     */
+    const Mac::Address &GetMacAddress(Mac::Address &aMacAddress) const;
+
+#if OPENTHREAD_ENABLE_CHILD_SUPERVISION
+
+    /**
+     * This method increments the number of seconds since last supervision of the child.
+     *
+     */
+    void IncrementSecondsSinceLastSupervision(void) { mSecondsSinceSupervision++; }
+
+    /**
+     * This method returns the number of seconds since last supervision of the child (last message to the child)
+     *
+     * @returns Number of seconds since last supervision of the child.
+     *
+     */
+    uint16_t GetSecondsSinceLastSupervision(void) const { return mSecondsSinceSupervision; }
+
+    /**
+     * This method resets the number of seconds since last supervision of the child to zero.
+     *
+     */
+    void ResetSecondsSinceLastSupervision(void) { mSecondsSinceSupervision = 0; }
+
+#endif // #if OPENTHREAD_ENABLE_CHILD_SUPERVISION
+
 private:
     Ip6::Address mIp6Address[kMaxIp6AddressPerChild];  ///< Registered IPv6 addresses
     uint32_t     mTimeout;                             ///< Child timeout
@@ -646,6 +684,11 @@ private:
     uint16_t     mQueuedMessageCount : 13;             ///< Number of queued indirect messages for the child.
     bool         mUseShortAddress : 1;                 ///< Indicates whether to use short or extended address.
     bool         mSourceMatchPending : 1;              ///< Indicates whether or not pending to add to src match table.
+
+#if OPENTHREAD_ENABLE_CHILD_SUPERVISION
+    uint16_t     mSecondsSinceSupervision;             ///< Number of seconds since last supervision of the child.
+#endif // OPENTHREAD_ENABLE_CHILD_SUPERVISION
+
 };
 
 /**
@@ -743,6 +786,6 @@ private:
     bool    mReclaimDelay : 1;    ///< Indicates whether or not this entry is waiting to be reclaimed
 };
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // TOPOLOGY_HPP_

@@ -26,16 +26,18 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "test_util.h"
-#include "openthread/openthread.h"
-#include <common/debug.hpp>
-#include <string.h>
+#include "utils/wrap_string.h"
 
-#include <crypto/hmac_sha256.hpp>
-#include <crypto/mbedtls.hpp>
+#include <openthread/openthread.h>
+
+#include "common/debug.hpp"
+#include "crypto/hmac_sha256.hpp"
+#include "crypto/mbedtls.hpp"
+
+#include "test_util.h"
 
 #ifndef OPENTHREAD_MULTIPLE_INSTANCE
-static Thread::Crypto::MbedTls mMbedTls;
+static ot::Crypto::MbedTls mMbedTls;
 #endif
 
 void TestHmacSha256(void)
@@ -44,7 +46,7 @@ void TestHmacSha256(void)
     {
         const char *key;
         const char *data;
-        uint8_t hash[Thread::Crypto::HmacSha256::kHashSize];
+        uint8_t hash[ot::Crypto::HmacSha256::kHashSize];
     } tests[] =
     {
         {
@@ -64,8 +66,8 @@ void TestHmacSha256(void)
         },
     };
 
-    Thread::Crypto::HmacSha256 hmac;
-    uint8_t hash[Thread::Crypto::HmacSha256::kHashSize];
+    ot::Crypto::HmacSha256 hmac;
+    uint8_t hash[ot::Crypto::HmacSha256::kHashSize];
 
     for (int i = 0; tests[i].key != NULL; i++)
     {

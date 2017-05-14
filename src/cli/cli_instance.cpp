@@ -37,15 +37,16 @@
 #include <openthread-config.h>
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+#include "utils/wrap_string.h"
 
-#include "openthread/openthread.h"
+#include <openthread/openthread.h>
+
 #include "cli.hpp"
 
-namespace Thread {
+namespace ot {
 
 namespace Cli {
 
@@ -123,4 +124,4 @@ exit:
 }
 
 }  // namespace Cli
-}  // namespace Thread
+}  // namespace ot

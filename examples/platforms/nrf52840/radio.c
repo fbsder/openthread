@@ -32,6 +32,16 @@
  *
  */
 
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
+// NRF tools use #define PACKAGE - for other purposes
+// ie: the physical package the chip comes in
+// This conflicts with the GNU Autoconf "PACAKGE" define
+#undef PACKAGE
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -53,6 +63,11 @@
 
 #define SHORT_ADDRESS_SIZE    2
 #define EXTENDED_ADDRESS_SIZE 8
+
+enum
+{
+    NRF52840_RECEIVE_SENSITIVITY = -100,  // dBm
+};
 
 static bool sDisabled;
 
@@ -597,4 +612,10 @@ void nrf_drv_radio802154_energy_detected(int8_t result)
     sEnergyDetected = result;
 
     setPendingEvent(kPendingEventEnergyDetected);
+}
+
+int8_t otPlatRadioGetReceiveSensitivity(otInstance *aInstance)
+{
+    (void)aInstance;
+    return NRF52840_RECEIVE_SENSITIVITY;
 }

@@ -36,12 +36,13 @@
 
 #include <ctype.h>
 #include <stdio.h>
-#include <string.h>
+#include "utils/wrap_string.h"
 
-#include <openthread-core-config.h>
-#include "openthread/types.h"
-#include "openthread/instance.h"
-#include "openthread/platform/logging.h"
+#include <openthread/instance.h>
+#include <openthread/types.h>
+#include <openthread/platform/logging.h>
+
+#include "openthread-core-config.h"
 
 #ifdef WINDOWS_LOGGING
 #ifdef _KERNEL_MODE
@@ -723,6 +724,60 @@ extern "C" {
 #define otLogDebgPlat(aInstance, aFormat, ...)
 #endif
 
+/**
+ * @def otLogCritCoap
+ *
+ * This method generates a log with level critical for the CoAP region.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogWarnCoap
+ *
+ * This method generates a log with level warning for the CoAP region.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogInfoCoap
+ *
+ * This method generates a log with level info for the CoAP region.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogDebgCoap
+ *
+ * This method generates a log with level debug for the CoAP region.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+#if OPENTHREAD_CONFIG_LOG_COAP == 1
+#define otLogCritCoap(aInstance, aFormat, ...) otLogCrit(aInstance, kLogRegionCoap, aFormat, ## __VA_ARGS__)
+#define otLogWarnCoap(aInstance, aFormat, ...) otLogWarn(aInstance, kLogRegionCoap, aFormat, ## __VA_ARGS__)
+#define otLogInfoCoap(aInstance, aFormat, ...) otLogInfo(aInstance, kLogRegionCoap, aFormat, ## __VA_ARGS__)
+#define otLogInfoCoapErr(aInstance, aError, aFormat, ...)               \
+    otLogInfo(aInstance, kLogRegionCoap, "Error %s: " aFormat, otThreadErrorToString(aError), ## __VA_ARGS__)
+#define otLogDebgCoap(aInstance, aFormat, ...) otLogDebg(aInstance, kLogRegionCoap, aFormat, ## __VA_ARGS__)
+#else
+#define otLogCritCoap(aInstance, aFormat, ...)
+#define otLogWarnCoap(aInstance, aFormat, ...)
+#define otLogInfoCoap(aInstance, aFormat, ...)
+#define otLogInfoCoapErr(aInstance, aError, aFormat, ...)
+#define otLogDebgCoap(aInstance, aFormat, ...)
+#endif
+
 #endif // WINDOWS_LOGGING
 
 /**
@@ -1244,7 +1299,7 @@ const char *otLogRegionToString(otLogRegion aRegion);
  * Local/private macro to format the log message
  */
 #define _otLogFormatter(aInstance, aLogLevel, aRegion, aFormat, ...)        \
-    _otPlatLog(                                                             \
+    _otDynamicLog(                                                          \
         aInstance,                                                          \
         aLogLevel,                                                          \
         aRegion,                                                            \
@@ -1260,7 +1315,7 @@ const char *otLogRegionToString(otLogRegion aRegion);
 * Local/private macro to format the log message
 */
 #define _otLogFormatter(aInstanc, aLogLevel, aRegion, aFormat, ...)         \
-    _otPlatLog(                                                             \
+    _otDynamicLog(                                                          \
         aInstance,                                                          \
         aLogLevel,                                                          \
         aRegion,                                                            \
@@ -1279,7 +1334,7 @@ const char *otLogRegionToString(otLogRegion aRegion);
 * Local/private macro to format the log message
 */
 #define _otLogFormatter(aInstance, aLogLevel, aRegion, aFormat, ...)        \
-    _otPlatLog(                                                             \
+    _otDynamicLog(                                                          \
         aInstance,                                                          \
         aLogLevel,                                                          \
         aRegion,                                                            \
@@ -1294,7 +1349,7 @@ const char *otLogRegionToString(otLogRegion aRegion);
 * Local/private macro to format the log message
 */
 #define _otLogFormatter(aInstace, aLogLevel, aRegion, aFormat, ...)         \
-    _otPlatLog(                                                             \
+    _otDynamicLog(                                                          \
         aInstance,                                                          \
         aLogLevel,                                                          \
         aRegion,                                                            \
@@ -1306,23 +1361,30 @@ const char *otLogRegionToString(otLogRegion aRegion);
 
 #endif // OPENTHREAD_CONFIG_LOG_PREPEND_REGION
 
-
 #if OPENTHREAD_CONFIG_ENABLE_DYNAMIC_LOG_LEVEL == 1
 
 /**
 * Local/private macro to dynamically filter log level.
 */
-#define _otPlatLog(aInstance, aLogLevel, aRegion, aFormat, ...)             \
+#define _otDynamicLog(aInstance, aLogLevel, aRegion, aFormat, ...)          \
     do {                                                                    \
         if (otGetDynamicLogLevel(aInstance) >= aLogLevel)                   \
-            otPlatLog(aLogLevel, aRegion, aFormat, ## __VA_ARGS__);         \
+            _otPlatLog(aLogLevel, aRegion, aFormat, ## __VA_ARGS__);        \
     } while (false)
 
 #else // OPENTHREAD_CONFIG_ENABLE_DYNAMIC_LOG_LEVEL
 
-#define _otPlatLog(aInstance, aLogLevel, aRegion, aFormat, ...) otPlatLog(aLogLevel, aRegion, aFormat, ## __VA_ARGS__)
+#define _otDynamicLog(aInstance, aLogLevel, aRegion, aFormat, ...)          \
+    _otPlatLog(aLogLevel, aRegion, aFormat, ## __VA_ARGS__)
 
 #endif // OPENTHREAD_CONFIG_ENABLE_DYNAMIC_LOG_LEVEL
+
+/**
+ * `OPENTHREAD_CONFIG_PLAT_LOG_FUNCTION` is a configuration parameter (see `openthread-core-default-config.h`) which
+ * specifies the function/macro to be used for logging in OpenThread. By default it is set to `otPlatLog()`.
+ */
+#define _otPlatLog(aLogLevel, aRegion, aFormat, ...)                        \
+    OPENTHREAD_CONFIG_PLAT_LOG_FUNCTION(aLogLevel, aRegion, aFormat, ## __VA_ARGS__)
 
 #ifdef __cplusplus
 };

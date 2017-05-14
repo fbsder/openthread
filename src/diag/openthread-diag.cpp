@@ -33,12 +33,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include "utils/wrap_string.h"
 
-#include "openthread/diag.h"
-#include <diag_process.hpp>
+#include <openthread/diag.h>
 
-using namespace Thread::Diagnostics;
+#include "diag_process.hpp"
+
+using namespace ot::Diagnostics;
 
 void otDiagInit(otInstance *aInstance)
 {

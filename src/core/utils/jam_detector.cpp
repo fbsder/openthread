@@ -37,32 +37,34 @@
 #include <openthread-config.h>
 #endif
 
-#include "openthread/openthread.h"
-#include "openthread/platform/random.h"
+#include "jam_detector.hpp"
 
-#include <thread/thread_netif.hpp>
-#include <common/code_utils.hpp>
-#include <utils/jam_detector.hpp>
+#include <openthread/openthread.h>
+#include <openthread/platform/random.h>
+
+#include "common/code_utils.hpp"
+#include "thread/thread_netif.hpp"
 
 #if OPENTHREAD_ENABLE_JAM_DETECTION
 
-namespace Thread {
+namespace ot {
 namespace Utils {
 
 JamDetector::JamDetector(ThreadNetif &aNetif) :
     mNetif(aNetif),
-    mTimer(aNetif.GetIp6().mTimerScheduler, &JamDetector::HandleTimer, this)
+    mHandler(NULL),
+    mContext(NULL),
+    mRssiThreshold(kDefaultRssiThreshold),
+    mTimer(aNetif.GetIp6().mTimerScheduler, &JamDetector::HandleTimer, this),
+    mHistoryBitmap(0),
+    mCurSecondStartTime(0),
+    mSampleInterval(0),
+    mWindow(kMaxWindow),
+    mBusyPeriod(kMaxWindow),
+    mEnabled(false),
+    mAlwaysAboveThreshold(false),
+    mJamState(false)
 {
-    mWindow = kMaxWindow;
-    mBusyPeriod = kMaxWindow;
-    mRssiThreshold = kDefaultRssiThreshold;
-
-    mEnabled = false;
-
-    mHandler = NULL;
-    mContext = NULL;
-
-    mHistoryBitmap = 0;
 }
 
 ThreadError JamDetector::Start(Handler aHandler, void *aContext)
@@ -242,6 +244,6 @@ void JamDetector::UpdateJamState(void)
 }
 
 }  // namespace Utils
-}  // namespace Thread
+}  // namespace ot
 
 #endif // OPENTHREAD_ENABLE_JAM_DETECTION

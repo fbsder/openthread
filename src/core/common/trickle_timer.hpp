@@ -34,9 +34,9 @@
 #ifndef TRICKLE_TIMER_HPP_
 #define TRICKLE_TIMER_HPP_
 
-#include <common/timer.hpp>
+#include "common/timer.hpp"
 
-namespace Thread {
+namespace ot {
 
 /**
  * @addtogroup core-timer-trickle
@@ -185,6 +185,6 @@ private:
  *
  */
 
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // TRICKLE_TIMER_HPP_

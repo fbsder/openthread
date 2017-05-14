@@ -37,43 +37,50 @@
 #include <openthread-config.h>
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "cli.hpp"
 
 #ifdef OTDLL
 #include <assert.h>
 #endif
 
-#include "openthread/openthread.h"
-#include "openthread/commissioner.h"
-#include "openthread/joiner.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "utils/wrap_string.h"
 
-#ifndef OTDLL
-#include <openthread-instance.h>
-#include "openthread/diag.h"
-#include "openthread/icmp6.h"
+#include <openthread/openthread.h>
+#include <openthread/commissioner.h>
+#include <openthread/joiner.h>
 
-#include <common/new.hpp>
-#include <net/ip6.hpp>
-#include "openthread/dhcp6_client.h"
-#include "openthread/dhcp6_server.h"
-#include "openthread/platform/uart.h"
+#if OPENTHREAD_FTD
+#include <openthread/dataset_ftd.h>
+#include <openthread/thread_ftd.h>
 #endif
 
-#include <common/encoding.hpp>
+#ifndef OTDLL
+#include <openthread/dhcp6_client.h>
+#include <openthread/dhcp6_server.h>
+#include <openthread/diag.h>
+#include <openthread/icmp6.h>
+#include <openthread/platform/uart.h>
 
-#include "cli.hpp"
+#include "openthread-instance.h"
+#include "common/new.hpp"
+#include "net/ip6.hpp"
+#endif
+
 #include "cli_dataset.hpp"
 #include "cli_uart.hpp"
+
 #if OPENTHREAD_ENABLE_APPLICATION_COAP
 #include "cli_coap.hpp"
 #endif
 
-using Thread::Encoding::BigEndian::HostSwap16;
-using Thread::Encoding::BigEndian::HostSwap32;
+#include "common/encoding.hpp"
 
-namespace Thread {
+using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap32;
+
+namespace ot {
 
 namespace Cli {
 
@@ -84,8 +91,10 @@ const struct Command Interpreter::sCommands[] =
     { "blacklist", &Interpreter::ProcessBlacklist },
     { "bufferinfo", &Interpreter::ProcessBufferInfo },
     { "channel", &Interpreter::ProcessChannel },
+#if OPENTHREAD_FTD
     { "child", &Interpreter::ProcessChild },
     { "childmax", &Interpreter::ProcessChildMax },
+#endif
     { "childtimeout", &Interpreter::ProcessChildTimeout },
 #if OPENTHREAD_ENABLE_APPLICATION_COAP
     { "coap", &Interpreter::ProcessCoap },
@@ -93,10 +102,14 @@ const struct Command Interpreter::sCommands[] =
 #if OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
     { "commissioner", &Interpreter::ProcessCommissioner },
 #endif
+#if OPENTHREAD_FTD
     { "contextreusedelay", &Interpreter::ProcessContextIdReuseDelay },
+#endif
     { "counter", &Interpreter::ProcessCounters },
     { "dataset", &Interpreter::ProcessDataset },
+#if OPENTHREAD_FTD
     { "delaytimermin", &Interpreter::ProcessDelayTimerMin},
+#endif
 #if OPENTHREAD_ENABLE_DIAG
     { "diag", &Interpreter::ProcessDiag },
 #endif
@@ -104,7 +117,9 @@ const struct Command Interpreter::sCommands[] =
 #if OPENTHREAD_ENABLE_DNS_CLIENT
     { "dns", &Interpreter::ProcessDns },
 #endif
+#if OPENTHREAD_FTD
     { "eidcache", &Interpreter::ProcessEidCache },
+#endif
     { "eui64", &Interpreter::ProcessEui64 },
 #ifdef OPENTHREAD_EXAMPLES_POSIX
     { "exit", &Interpreter::ProcessExit },
@@ -125,17 +140,25 @@ const struct Command Interpreter::sCommands[] =
 #if OPENTHREAD_ENABLE_JOINER
     { "joiner", &Interpreter::ProcessJoiner },
 #endif
+#if OPENTHREAD_FTD
     { "joinerport", &Interpreter::ProcessJoinerPort },
+#endif
     { "keysequence", &Interpreter::ProcessKeySequence },
     { "leaderdata", &Interpreter::ProcessLeaderData },
+#if OPENTHREAD_FTD
     { "leaderpartitionid", &Interpreter::ProcessLeaderPartitionId },
     { "leaderweight", &Interpreter::ProcessLeaderWeight },
+#endif
     { "linkquality", &Interpreter::ProcessLinkQuality },
     { "masterkey", &Interpreter::ProcessMasterKey },
     { "mode", &Interpreter::ProcessMode },
     { "netdataregister", &Interpreter::ProcessNetworkDataRegister },
+#if OPENTHREAD_FTD || OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC
     { "networkdiagnostic", &Interpreter::ProcessNetworkDiagnostic },
+#endif // OPENTHREAD_FTD || OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC
+#if OPENTHREAD_FTD
     { "networkidtimeout", &Interpreter::ProcessNetworkIdTimeout },
+#endif
     { "networkname", &Interpreter::ProcessNetworkName },
     { "panid", &Interpreter::ProcessPanId },
     { "parent", &Interpreter::ProcessParent },
@@ -147,15 +170,20 @@ const struct Command Interpreter::sCommands[] =
     { "promiscuous", &Interpreter::ProcessPromiscuous },
 #endif
     { "prefix", &Interpreter::ProcessPrefix },
+#if OPENTHREAD_FTD
+    { "pskc", &Interpreter::ProcessPSKc },
     { "releaserouterid", &Interpreter::ProcessReleaseRouterId },
+#endif
     { "reset", &Interpreter::ProcessReset },
     { "rloc16", &Interpreter::ProcessRloc16 },
     { "route", &Interpreter::ProcessRoute },
+#if OPENTHREAD_FTD
     { "router", &Interpreter::ProcessRouter },
     { "routerdowngradethreshold", &Interpreter::ProcessRouterDowngradeThreshold },
     { "routerrole", &Interpreter::ProcessRouterRole },
     { "routerselectionjitter", &Interpreter::ProcessRouterSelectionJitter },
     { "routerupgradethreshold", &Interpreter::ProcessRouterUpgradeThreshold },
+#endif
     { "scan", &Interpreter::ProcessScan },
     { "singleton", &Interpreter::ProcessSingleton },
     { "state", &Interpreter::ProcessState },
@@ -214,7 +242,9 @@ Interpreter::Interpreter(otInstance *aInstance):
 #else
     memset(mSlaacAddresses, 0, sizeof(mSlaacAddresses));
     otSetStateChangedCallback(mInstance, &Interpreter::s_HandleNetifStateChanged, this);
+#if OPENTHREAD_FTD || OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC
     otThreadSetReceiveDiagnosticGetCallback(mInstance, &Interpreter::s_HandleDiagnosticGetResponse, this);
+#endif
 
     mIcmpHandler.mReceiveCallback = Interpreter::s_HandleIcmpReceive;
     mIcmpHandler.mContext         = this;
@@ -439,8 +469,8 @@ void Interpreter::ProcessBufferInfo(int argc, char *argv[])
     sServer->OutputFormat("mpl: %d %d\r\n", bufferInfo.mMplMessages, bufferInfo.mMplBuffers);
     sServer->OutputFormat("mle: %d %d\r\n", bufferInfo.mMleMessages, bufferInfo.mMleBuffers);
     sServer->OutputFormat("arp: %d %d\r\n", bufferInfo.mArpMessages, bufferInfo.mArpBuffers);
-    sServer->OutputFormat("coap client: %d %d\r\n", bufferInfo.mCoapClientMessages, bufferInfo.mCoapClientBuffers);
-    sServer->OutputFormat("coap server: %d %d\r\n", bufferInfo.mCoapServerMessages, bufferInfo.mCoapServerBuffers);
+    sServer->OutputFormat("coap: %d %d\r\n", bufferInfo.mCoapMessages, bufferInfo.mCoapBuffers);
+    sServer->OutputFormat("coap secure: %d %d\r\n", bufferInfo.mCoapSecureMessages, bufferInfo.mCoapSecureBuffers);
 
     AppendResult(kThreadError_None);
 }
@@ -464,6 +494,7 @@ exit:
     AppendResult(error);
 }
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessChild(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -598,6 +629,7 @@ void Interpreter::ProcessChildMax(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif  // OPENTHREAD_FTD
 
 void Interpreter::ProcessChildTimeout(int argc, char *argv[])
 {
@@ -629,6 +661,7 @@ void Interpreter::ProcessCoap(int argc, char *argv[])
 
 #endif // OPENTHREAD_ENABLE_APPLICATION_COAP
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessContextIdReuseDelay(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -647,6 +680,7 @@ void Interpreter::ProcessContextIdReuseDelay(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif  // OPENTHREAD_FTD
 
 void Interpreter::ProcessCounters(int argc, char *argv[])
 {
@@ -701,6 +735,7 @@ void Interpreter::ProcessDataset(int argc, char *argv[])
     AppendResult(error);
 }
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessDelayTimerMin(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -723,6 +758,7 @@ void Interpreter::ProcessDelayTimerMin(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif
 
 void Interpreter::ProcessDiscover(int argc, char *argv[])
 {
@@ -736,7 +772,7 @@ void Interpreter::ProcessDiscover(int argc, char *argv[])
         scanChannels = 1 << value;
     }
 
-    SuccessOrExit(error = otThreadDiscover(mInstance, scanChannels, OT_PANID_BROADCAST,
+    SuccessOrExit(error = otThreadDiscover(mInstance, scanChannels, OT_PANID_BROADCAST, false, false,
                                            &Interpreter::s_HandleActiveScanResult, this));
     sServer->OutputFormat("| J | Network Name     | Extended PAN     | PAN  | MAC Address      | Ch | dBm | LQI |\r\n");
     sServer->OutputFormat("+---+------------------+------------------+------+------------------+----+-----+-----+\r\n");
@@ -837,6 +873,7 @@ void Interpreter::HandleDnsResponse(const char *aHostname, Ip6::Address &aAddres
 }
 #endif
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessEidCache(int argc, char *argv[])
 {
     otEidCacheEntry entry;
@@ -867,6 +904,7 @@ exit:
     (void)argv;
     AppendResult(kThreadError_None);
 }
+#endif  // OPENTHREAD_FTD
 
 void Interpreter::ProcessEui64(int argc, char *argv[])
 {
@@ -1217,6 +1255,7 @@ exit:
     AppendResult(error);
 }
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessLeaderPartitionId(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -1254,6 +1293,7 @@ void Interpreter::ProcessLeaderWeight(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif  // OPENTHREAD_FTD
 
 void Interpreter::ProcessLinkQuality(int argc, char *argv[])
 {
@@ -1281,16 +1321,44 @@ exit:
     AppendResult(error);
 }
 
+#if OPENTHREAD_FTD
+void Interpreter::ProcessPSKc(int argc, char *argv[])
+{
+    ThreadError error = kThreadError_None;
+
+    if (argc == 0)
+    {
+        const uint8_t *currentPSKc = otThreadGetPSKc(mInstance);
+
+        for (int i = 0; i < OT_PSKC_MAX_SIZE; i++)
+        {
+            sServer->OutputFormat("%02x", currentPSKc[i]);
+        }
+
+        sServer->OutputFormat("\r\n");
+    }
+    else
+    {
+        uint8_t newPSKc[OT_PSKC_MAX_SIZE];
+
+        VerifyOrExit(Hex2Bin(argv[0], newPSKc, sizeof(newPSKc)) == OT_PSKC_MAX_SIZE, error = kThreadError_Parse);
+        SuccessOrExit(error = otThreadSetPSKc(mInstance, newPSKc));
+    }
+
+exit:
+    AppendResult(error);
+}
+#endif
+
 void Interpreter::ProcessMasterKey(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
 
     if (argc == 0)
     {
-        uint8_t keyLength;
-        otBufferPtr key(otThreadGetMasterKey(mInstance, &keyLength));
+        otBufferPtr key(reinterpret_cast<const uint8_t *>(otThreadGetMasterKey(mInstance)));
 
-        for (int i = 0; i < keyLength; i++)
+        for (int i = 0; i < OT_MASTER_KEY_SIZE; i++)
         {
             sServer->OutputFormat("%02x", key[i]);
         }
@@ -1299,11 +1367,10 @@ void Interpreter::ProcessMasterKey(int argc, char *argv[])
     }
     else
     {
-        int keyLength;
-        uint8_t key[OT_MASTER_KEY_SIZE];
+        otMasterKey key;
 
-        VerifyOrExit((keyLength = Hex2Bin(argv[0], key, sizeof(key))) == OT_MASTER_KEY_SIZE, error = kThreadError_Parse);
-        SuccessOrExit(error = otThreadSetMasterKey(mInstance, key, static_cast<uint8_t>(keyLength)));
+        VerifyOrExit(Hex2Bin(argv[0], key.m8, sizeof(key.m8)) == OT_MASTER_KEY_SIZE, error = kThreadError_Parse);
+        SuccessOrExit(error = otThreadSetMasterKey(mInstance, &key));
     }
 
 exit:
@@ -1388,6 +1455,7 @@ exit:
     AppendResult(error);
 }
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessNetworkIdTimeout(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -1406,6 +1474,7 @@ void Interpreter::ProcessNetworkIdTimeout(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif  // OPENTHREAD_FTD
 
 void Interpreter::ProcessNetworkName(int argc, char *argv[])
 {
@@ -1934,6 +2003,7 @@ exit:
     AppendResult(error);
 }
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessReleaseRouterId(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -1947,6 +2017,7 @@ void Interpreter::ProcessReleaseRouterId(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif  // OPENTHREAD_FTD
 
 void Interpreter::ProcessReset(int argc, char *argv[])
 {
@@ -2081,6 +2152,7 @@ exit:
     AppendResult(error);
 }
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessRouter(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -2256,6 +2328,7 @@ void Interpreter::ProcessRouterUpgradeThreshold(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif  // OPENTHREAD_FTD
 
 void Interpreter::ProcessScan(int argc, char *argv[])
 {
@@ -2353,12 +2426,19 @@ void Interpreter::ProcessState(int argc, char *argv[])
             sServer->OutputFormat("child\r\n");
             break;
 
+#if OPENTHREAD_FTD
+
         case kDeviceRoleRouter:
             sServer->OutputFormat("router\r\n");
             break;
 
         case kDeviceRoleLeader:
             sServer->OutputFormat("leader\r\n");
+            break;
+#endif  // OPENTHREAD_FTD
+
+        default:
+            sServer->OutputFormat("invalid state\r\n");
             break;
         }
     }
@@ -2372,6 +2452,8 @@ void Interpreter::ProcessState(int argc, char *argv[])
         {
             SuccessOrExit(error = otThreadBecomeChild(mInstance, kMleAttachSamePartition1));
         }
+
+#if OPENTHREAD_FTD
         else if (strcmp(argv[0], "router") == 0)
         {
             SuccessOrExit(error = otThreadBecomeRouter(mInstance));
@@ -2380,6 +2462,8 @@ void Interpreter::ProcessState(int argc, char *argv[])
         {
             SuccessOrExit(error = otThreadBecomeLeader(mInstance));
         }
+
+#endif  // OPENTHREAD_FTD
         else
         {
             ExitNow(error = kThreadError_Parse);
@@ -2753,6 +2837,7 @@ void Interpreter::HandleJoinerCallback(ThreadError aError)
     }
 }
 
+#if OPENTHREAD_FTD
 void Interpreter::ProcessJoinerPort(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -2771,6 +2856,7 @@ void Interpreter::ProcessJoinerPort(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif
 
 void Interpreter::ProcessWhitelist(int argc, char *argv[])
 {
@@ -2948,6 +3034,7 @@ exit:
     return;
 }
 
+#if OPENTHREAD_FTD || OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC
 void Interpreter::ProcessNetworkDiagnostic(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -2986,6 +3073,7 @@ void Interpreter::ProcessNetworkDiagnostic(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+#endif // OPENTHREAD_FTD || OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC
 
 #ifndef OTDLL
 void Interpreter::s_HandleDiagnosticGetResponse(otMessage *aMessage, const otMessageInfo *aMessageInfo,
@@ -3020,4 +3108,4 @@ void Interpreter::HandleDiagnosticGetResponse(Message &aMessage, const Ip6::Mess
 #endif
 
 }  // namespace Cli
-}  // namespace Thread
+}  // namespace ot

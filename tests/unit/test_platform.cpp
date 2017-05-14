@@ -325,6 +325,11 @@ extern "C" {
         (void)aPower;
     }
 
+    int8_t otPlatRadioGetReceiveSensitivity(otInstance *aInstance)
+    {
+        (void)aInstance;
+        return 0;
+    }
     //
     // Random
     //
@@ -338,18 +343,16 @@ extern "C" {
 #endif
     }
 
-    ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
+    ThreadError otPlatRandomGetTrue(uint8_t *aOutput, uint16_t aOutputLength)
     {
         ThreadError error = kThreadError_None;
 
-        VerifyOrExit(aOutput && aOutputLength, error = kThreadError_InvalidArgs);
+        VerifyOrExit(aOutput, error = kThreadError_InvalidArgs);
 
-        for (uint16_t length = 0; length < aInputLength; length++)
+        for (uint16_t length = 0; length < aOutputLength; length++)
         {
             aOutput[length] = (uint8_t)otPlatRandomGet();
         }
-
-        *aOutputLength = aInputLength;
 
 exit:
         return error;

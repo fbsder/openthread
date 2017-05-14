@@ -31,14 +31,21 @@
  *   This file implements MPL.
  */
 
-#include "openthread/platform/random.h"
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
 
-#include <common/code_utils.hpp>
-#include <common/message.hpp>
-#include <net/ip6.hpp>
-#include <net/ip6_mpl.hpp>
+#include "ip6_mpl.hpp"
 
-namespace Thread {
+#include <openthread/platform/random.h>
+
+#include "common/code_utils.hpp"
+#include "common/message.hpp"
+#include "net/ip6.hpp"
+
+namespace ot {
 namespace Ip6 {
 
 void MplBufferedMessageMetadata::GenerateNextTransmissionTime(uint32_t aCurrentTime, uint8_t aInterval)
@@ -359,4 +366,4 @@ void Mpl::HandleSeedSetTimer()
 }
 
 }  // namespace Ip6
-}  // namespace Thread
+}  // namespace ot

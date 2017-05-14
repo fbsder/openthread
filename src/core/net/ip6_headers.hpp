@@ -36,21 +36,21 @@
 
 #include <stddef.h>
 
-#include "openthread/types.h"
+#include <openthread/types.h>
 
-#include <common/encoding.hpp>
-#include <common/message.hpp>
-#include <net/ip6_address.hpp>
-#include <net/netif.hpp>
-#include <net/socket.hpp>
+#include "common/encoding.hpp"
+#include "common/message.hpp"
+#include "net/ip6_address.hpp"
+#include "net/netif.hpp"
+#include "net/socket.hpp"
 
-using Thread::Encoding::BigEndian::HostSwap16;
-using Thread::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap32;
 
-namespace Thread {
+namespace ot {
 
 /**
- * @namespace Thread::Ip6
+ * @namespace ot::Ip6
  *
  * @brief
  *   This namespace includes definitions for IPv6 networking.
@@ -338,6 +338,14 @@ class OptionHeader
 {
 public:
     /**
+     * Default constructor.
+     *
+     */
+    OptionHeader(void):
+        mType(0),
+        mLength(0) {}
+
+    /**
      * This method returns the IPv6 Option Type value.
      *
      * @returns The IPv6 Option Type value.
@@ -550,6 +558,6 @@ private:
  */
 
 }  // namespace Ip6
-}  // namespace Thread
+}  // namespace ot
 
 #endif  // NET_IP6_HEADERS_HPP_

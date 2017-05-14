@@ -28,14 +28,15 @@
 
 /**
  * @file
- *   This file implements blacklist IEEE 802.15.4 frame filtering based on MAC address.
+ *   This file implements the OpenThread Link Raw API.
  */
 
-#include <common/debug.hpp>
-#include <common/logging.hpp>
-#include "openthread/platform/random.h"
-#include "openthread/platform/usec-alarm.h"
+#include <openthread/platform/random.h>
+#include <openthread/platform/usec-alarm.h>
+
 #include "openthread-instance.h"
+#include "common/debug.hpp"
+#include "common/logging.hpp"
 
 #if OPENTHREAD_ENABLE_RAW_LINK_API
 
@@ -257,7 +258,7 @@ exit:
     return error;
 }
 
-namespace Thread {
+namespace ot {
 
 LinkRaw::LinkRaw(otInstance &aInstance):
     mInstance(aInstance),
@@ -605,6 +606,6 @@ void LinkRaw::HandleEnergyScanTask(void)
 
 #endif // OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ENERGY_SCAN
 
-} // namespace Thread
+} // namespace ot
 
 #endif // OPENTHREAD_ENABLE_RAW_LINK_API
