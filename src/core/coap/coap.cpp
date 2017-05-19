@@ -59,7 +59,9 @@ Coap::Coap(ThreadNetif &aNetif):
     mRetransmissionTimer(aNetif.GetIp6().mTimerScheduler, &Coap::HandleRetransmissionTimer, this),
     mResources(NULL),
     mInterceptor(NULL),
-    mResponsesQueue(aNetif)
+    mResponsesQueue(aNetif),
+    mDefaultHandler(NULL),
+    mDefaultHandlerContext(NULL)
 {
     mMessageId = static_cast<uint16_t>(otPlatRandomGet());
 }
@@ -136,6 +138,12 @@ exit:
     aResource.mNext = NULL;
 }
 
+void Coap::SetDefaultHandler(otCoapRequestHandler aHandler, void *aContext)
+{
+    mDefaultHandler = aHandler;
+    mDefaultHandlerContext = aContext;
+}
+
 Message *Coap::NewMessage(const Header &aHeader, uint8_t aPriority)
 {
     Message *message = NULL;
@@ -181,7 +189,7 @@ ThreadError Coap::SendMessage(Message &aMessage, const Ip6::MessageInfo &aMessag
         // Create a copy of entire message and enqueue it.
         copyLength = aMessage.GetLength();
     }
-    else if (header.IsNonConfirmable() && header.IsRequest() && (aHandler != NULL))
+    else if (header.IsNonConfirmable() && (aHandler != NULL))
     {
         // As we do not retransmit non confirmable messages, create a copy of header only, for token information.
         copyLength = header.GetLength();
@@ -458,7 +466,9 @@ Message *Coap::FindRelatedRequest(const Header &aResponseHeader, const Ip6::Mess
              aCoapMetadata.mDestinationAddress.IsAnycastRoutingLocator()) &&
             (aCoapMetadata.mDestinationPort == aMessageInfo.GetPeerPort()))
         {
-            assert(aRequestHeader.FromMessage(*message, sizeof(CoapMetadata)) == kThreadError_None);
+            // FromMessage can return kThreadError_Parse if only partial message was stored (header only),
+            // but payload marker is present. Assume, that stored messages are always valid.
+            aRequestHeader.FromMessage(*message, sizeof(CoapMetadata));
 
             switch (aResponseHeader.GetType())
             {
@@ -664,6 +674,11 @@ void Coap::ProcessReceivedRequest(Header &aHeader, Message &aMessage, const Ip6:
             resource->HandleRequest(aHeader, aMessage, aMessageInfo);
             ExitNow();
         }
+    }
+
+    if (mDefaultHandler)
+    {
+        mDefaultHandler(mDefaultHandlerContext, &aHeader, &aMessage, &aMessageInfo);
     }
 
 exit:
