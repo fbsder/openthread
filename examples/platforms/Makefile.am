@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2016, The OpenThread Authors.
+#  Copyright (c) 2017, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,8 @@ DIST_SUBDIRS                            = \
     cc2650                                \
     da15000                               \
     efr32                                 \
+    emsk                                  \
+    kw41z                                 \
     nrf52840                              \
     samr21                                \
     posix                                 \
@@ -63,6 +65,14 @@ if OPENTHREAD_EXAMPLES_EFR32
 SUBDIRS                                += efr32
 endif
 
+if OPENTHREAD_EXAMPLES_EMSK
+SUBDIRS                                += emsk
+endif
+
+if OPENTHREAD_EXAMPLES_KW41Z
+SUBDIRS                                += kw41z
+endif
+
 if OPENTHREAD_EXAMPLES_NRF52840
 SUBDIRS                                += nrf52840
 endif
@@ -82,6 +92,8 @@ PRETTY_SUBDIRS                          = \
     cc2650                                \
     da15000                               \
     efr32                                 \
+    emsk                                  \
+    kw41z                                 \
     nrf52840                              \
     samr21                                \
     posix                                 \
