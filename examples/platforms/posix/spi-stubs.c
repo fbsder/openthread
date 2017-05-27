@@ -36,23 +36,25 @@
 
 // Spi-slave stubs
 
-ThreadError otPlatSpiSlaveEnable(otPlatSpiSlaveTransactionCompleteCallback aCallback, void *aContext)
+otError otPlatSpiSlaveEnable(otPlatSpiSlaveTransactionCompleteCallback aCompleteCallback,
+                             otPlatSpiSlaveTransactionProcessCallback aProcessCallback, void *aContext)
 {
-    (void)aCallback;
+    (void)aCompleteCallback;
+    (void)aProcessCallback;
     (void)aContext;
 
     fprintf(stderr, "\nNo SPI support for posix platform.");
     exit(0);
 
-    return kThreadError_NotImplemented;
+    return OT_ERROR_NOT_IMPLEMENTED;
 }
 
 void otPlatSpiSlaveDisable(void)
 {
 }
 
-ThreadError otPlatSpiSlavePrepareTransaction(uint8_t *aOutputBuf, uint16_t aOutputBufLen, uint8_t *aInputBuf,
-                                             uint16_t aInputBufLen, bool aRequestTransactionFlag)
+otError otPlatSpiSlavePrepareTransaction(uint8_t *aOutputBuf, uint16_t aOutputBufLen, uint8_t *aInputBuf,
+                                         uint16_t aInputBufLen, bool aRequestTransactionFlag)
 {
     (void)aOutputBuf;
     (void)aOutputBufLen;
@@ -60,7 +62,7 @@ ThreadError otPlatSpiSlavePrepareTransaction(uint8_t *aOutputBuf, uint16_t aOutp
     (void)aInputBufLen;
     (void)aRequestTransactionFlag;
 
-    return kThreadError_NotImplemented;
+    return OT_ERROR_NOT_IMPLEMENTED;
 }
 
 // Uart
