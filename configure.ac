@@ -335,9 +335,9 @@ fi
 #
 
 AC_SUBST(PRETTY, ["\${abs_top_srcdir}/.astyle/astyle-wrap.sh"])
-AC_SUBST(PRETTY_ARGS, ["astyle --options=\${abs_top_builddir}/.astyle/astyle-opts"])
+AC_SUBST(PRETTY_ARGS, ["astyle --options=\${abs_top_srcdir}/.astyle/astyle-opts"])
 AC_SUBST(PRETTY_CHECK, ["\${abs_top_srcdir}/.astyle/astyle-wrap.sh"])
-AC_SUBST(PRETTY_CHECK_ARGS, ["astyle --options=\${abs_top_builddir}/.astyle/astyle-opts --dry-run"])
+AC_SUBST(PRETTY_CHECK_ARGS, ["astyle --options=\${abs_top_srcdir}/.astyle/astyle-opts --dry-run"])
 
 #
 # Tests
@@ -537,36 +537,36 @@ AC_MSG_RESULT(${enable_builtin_mbedtls})
 AM_CONDITIONAL([OPENTHREAD_ENABLE_BUILTIN_MBEDTLS], [test "${enable_builtin_mbedtls}" = "yes"])
 
 #
-# Thread Border Agent Proxy
+# Thread TMF Proxy
 #
 
-AC_MSG_CHECKING([whether to enable border router proxy])
-AC_ARG_ENABLE(border_agent_proxy,
-    [AS_HELP_STRING([--enable-border-agent-proxy],[Enable border agent proxy support @<:@default=no@:>@.])],
+AC_MSG_CHECKING([whether to enable TMF proxy])
+AC_ARG_ENABLE(tmf_proxy,
+    [AS_HELP_STRING([--enable-tmf-proxy],[Enable TMF proxy support @<:@default=no@:>@.])],
     [
         case "${enableval}" in
 
         no|yes)
-            enable_border_agent_proxy=${enableval}
+            enable_tmf_proxy=${enableval}
             ;;
 
         *)
-            AC_MSG_ERROR([Invalid value ${enable_border_agent_proxy} for --enable-border-agent-proxy])
+            AC_MSG_ERROR([Invalid value ${enable_tmf_proxy} for --enable-tmf-proxy])
             ;;
         esac
     ],
-    [enable_border_agent_proxy=no])
+    [enable_tmf_proxy=no])
 
-if test "$enable_border_agent_proxy" = "yes"; then
-    OPENTHREAD_ENABLE_BORDER_AGENT_PROXY=1
+if test "$enable_tmf_proxy" = "yes"; then
+    OPENTHREAD_ENABLE_TMF_PROXY=1
 else
-    OPENTHREAD_ENABLE_BORDER_AGENT_PROXY=0
+    OPENTHREAD_ENABLE_TMF_PROXY=0
 fi
 
-AC_MSG_RESULT(${enable_border_agent_proxy})
-AC_SUBST(OPENTHREAD_ENABLE_BORDER_AGENT_PROXY)
-AM_CONDITIONAL([OPENTHREAD_ENABLE_BORDER_AGENT_PROXY], [test "${enable_border_agent_proxy}" = "yes"])
-AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_BORDER_AGENT_PROXY],[${OPENTHREAD_ENABLE_BORDER_AGENT_PROXY}],[Define to 1 to enable the border agent proxy feature.])
+AC_MSG_RESULT(${enable_tmf_proxy})
+AC_SUBST(OPENTHREAD_ENABLE_TMF_PROXY)
+AM_CONDITIONAL([OPENTHREAD_ENABLE_TMF_PROXY], [test "${enable_tmf_proxy}" = "yes"])
+AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_TMF_PROXY],[${OPENTHREAD_ENABLE_TMF_PROXY}],[Define to 1 to enable the TMF proxy feature.])
 
 #
 # Thread Network Diagnostic for MTD
@@ -838,36 +838,6 @@ AM_CONDITIONAL([OPENTHREAD_ENABLE_CHILD_SUPERVISION], [test "${enable_child_supe
 AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_CHILD_SUPERVISION],[${OPENTHREAD_ENABLE_CHILD_SUPERVISION}],[Define to 1 if you want to use child supervision feature])
 
 #
-# Default Logging
-#
-
-AC_ARG_ENABLE(default_logging,
-    [AS_HELP_STRING([--enable-default-logging],[Enable default logging support @<:@default=no@:>@.])],
-    [
-        case "${enableval}" in
-
-        no|yes)
-            enable_default_logging=${enableval}
-            ;;
-
-        *)
-            AC_MSG_ERROR([Invalid value ${enable_default_logging} for --enable-default-logging])
-            ;;
-        esac
-    ],
-    [enable_default_logging=no])
-
-if test "$enable_default_logging" = "yes"; then
-    OPENTHREAD_ENABLE_DEFAULT_LOGGING=1
-else
-    OPENTHREAD_ENABLE_DEFAULT_LOGGING=0
-fi
-
-AC_SUBST(OPENTHREAD_ENABLE_DEFAULT_LOGGING)
-AM_CONDITIONAL([OPENTHREAD_ENABLE_DEFAULT_LOGGING], [test "${enable_default_logging}" = "yes"])
-AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_DEFAULT_LOGGING],[${OPENTHREAD_ENABLE_DEFAULT_LOGGING}],[Define to 1 if you want to enable default logging])
-
-#
 # Log for certification test
 #
 
@@ -1046,6 +1016,36 @@ fi
 AC_SUBST(OPENTHREAD_ENABLE_RAW_LINK_API)
 AM_CONDITIONAL([OPENTHREAD_ENABLE_RAW_LINK_API], [test "${enable_raw_link_api}" = "yes"])
 AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_RAW_LINK_API],[${OPENTHREAD_ENABLE_RAW_LINK_API}],[Define to 1 if you want to enable raw link-layer API])
+
+#
+# Border Router
+#
+
+AC_ARG_ENABLE(border_router,
+    [AS_HELP_STRING([--enable-border-router],[Enable Border Router support @<:@default=no@:>@.])],
+    [
+        case "${enableval}" in
+
+        no|yes)
+            enable_border_router=${enableval}
+            ;;
+
+        *)
+            AC_MSG_ERROR([Invalid value ${enable_border_router} for --enable-border-router])
+            ;;
+        esac
+    ],
+    [enable_border_router=no])
+
+if test "$enable_border_router" = "yes"; then
+    OPENTHREAD_ENABLE_BORDER_ROUTER=1
+else
+    OPENTHREAD_ENABLE_BORDER_ROUTER=0
+fi
+
+AC_SUBST(OPENTHREAD_ENABLE_BORDER_ROUTER)
+AM_CONDITIONAL([OPENTHREAD_ENABLE_BORDER_ROUTER], [test "${enable_border_router}" = "yes"])
+AC_DEFINE_UNQUOTED([OPENTHREAD_ENABLE_BORDER_ROUTER],[${OPENTHREAD_ENABLE_BORDER_ROUTER}],[Define to 1 if you want to enable Border Router])
 
 #
 # Examples
@@ -1393,7 +1393,7 @@ AC_MSG_NOTICE([
   OpenThread NCP-BUS Configuration          : ${with_ncp_bus}
   OpenThread MTD Network Diagnostic support : ${enable_mtd_network_diagnostic}
   OpenThread builtin mbedtls support        : ${enable_builtin_mbedtls}
-  OpenThread Border Agent Proxy support     : ${enable_border_agent_proxy}
+  OpenThread TMF Proxy support              : ${enable_tmf_proxy}
   OpenThread Commissioner support           : ${enable_commissioner}
   OpenThread Joiner support                 : ${enable_joiner}
   OpenThread DTLS support                   : ${enable_dtls}
@@ -1409,6 +1409,7 @@ AC_MSG_NOTICE([
   OpenThread DNS Client support             : ${enable_dns_client}
   OpenThread Application CoAP support       : ${enable_application_coap}
   OpenThread Raw Link-Layer support         : ${enable_raw_link_api}
+  OpenThread Border Router support          : ${enable_border_router}
   OpenThread examples                       : ${OPENTHREAD_EXAMPLES}
   OpenThread platform information           : ${PLATFORM_INFO}
 

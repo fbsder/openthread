@@ -306,7 +306,7 @@ otError DatasetManager::Register(void)
     Message *message;
     Ip6::MessageInfo messageInfo;
 
-    header.Init(kCoapTypeConfirmable, kCoapRequestPost);
+    header.Init(OT_COAP_TYPE_CONFIRMABLE, OT_COAP_CODE_POST);
     header.SetToken(Coap::Header::kDefaultTokenLength);
     header.AppendUriPathOptions(mUriSet);
     header.SetPayloadMarker();
@@ -430,8 +430,8 @@ otError DatasetManager::Set(Coap::Header &aHeader, Message &aMessage, const Ip6:
     if (Tlv::GetTlv(aMessage, Tlv::kChannel, sizeof(channel), channel) == OT_ERROR_NONE)
     {
         VerifyOrExit(channel.IsValid() &&
-                     channel.GetChannel() >= kPhyMinChannel &&
-                     channel.GetChannel() <= kPhyMaxChannel,
+                     channel.GetChannel() >= OT_RADIO_CHANNEL_MIN &&
+                     channel.GetChannel() <= OT_RADIO_CHANNEL_MAX,
                      state = StateTlv::kReject);
 
         if (channel.GetChannel() != mNetif.GetMac().GetChannel())
@@ -593,7 +593,7 @@ otError DatasetManager::SendSetRequest(const otOperationalDataset &aDataset, con
     Message *message;
     Ip6::MessageInfo messageInfo;
 
-    header.Init(kCoapTypeConfirmable, kCoapRequestPost);
+    header.Init(OT_COAP_TYPE_CONFIRMABLE, OT_COAP_CODE_POST);
     header.SetToken(Coap::Header::kDefaultTokenLength);
     header.AppendUriPathOptions(mUriSet);
     header.SetPayloadMarker();
@@ -751,7 +751,7 @@ otError DatasetManager::SendGetRequest(const uint8_t *aTlvTypes, uint8_t aLength
     Ip6::MessageInfo messageInfo;
     Tlv tlv;
 
-    header.Init(kCoapTypeConfirmable, kCoapRequestPost);
+    header.Init(OT_COAP_TYPE_CONFIRMABLE, OT_COAP_CODE_POST);
     header.SetToken(Coap::Header::kDefaultTokenLength);
     header.AppendUriPathOptions(mUriGet);
 

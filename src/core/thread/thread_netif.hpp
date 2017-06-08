@@ -46,9 +46,9 @@
 #include "coap/coap_secure.hpp"
 #include "mac/mac.hpp"
 
-#if OPENTHREAD_ENABLE_BORDER_AGENT_PROXY && OPENTHREAD_FTD
-#include "meshcop/border_agent_proxy.hpp"
-#endif // OPENTHREAD_ENABLE_BORDER_AGENT_PROXY && OPENTHREAD_FTD
+#if OPENTHREAD_ENABLE_TMF_PROXY && OPENTHREAD_FTD
+#include "thread/tmf_proxy.hpp"
+#endif // OPENTHREAD_ENABLE_TMF_PROXY && OPENTHREAD_FTD
 
 #if OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
 #include "meshcop/commissioner.hpp"
@@ -258,6 +258,7 @@ public:
      */
     MeshForwarder &GetMeshForwarder(void) { return mMeshForwarder; }
 
+#if OPENTHREAD_ENABLE_BORDER_ROUTER
     /**
      * This method returns a reference to the network data local object.
      *
@@ -265,6 +266,7 @@ public:
      *
      */
     NetworkData::Local &GetNetworkDataLocal(void) { return mNetworkDataLocal; }
+#endif  // OPENTHREAD_ENABLE_BORDER_ROUTER
 
     /**
      * This method returns a reference to the network data leader object.
@@ -372,15 +374,15 @@ public:
     Utils::JamDetector &GetJamDetector(void) { return mJamDetector; }
 #endif // OPENTHREAD_ENABLE_JAM_DETECTION
 
-#if OPENTHREAD_ENABLE_BORDER_AGENT_PROXY && OPENTHREAD_FTD
+#if OPENTHREAD_ENABLE_TMF_PROXY && OPENTHREAD_FTD
     /**
-     * This method returns the border agent proxy object.
+     * This method returns the TMF proxy object.
      *
-     * @returns Reference to the border agent proxy object.
+     * @returns Reference to the TMF proxy object.
      *
      */
-    MeshCoP::BorderAgentProxy &GetBorderAgentProxy(void) { return mBorderAgentProxy; }
-#endif // OPENTHREAD_ENABLE_BORDER_AGENT_PROXY && OPENTHREAD_FTD
+    TmfProxy &GetTmfProxy(void) { return mTmfProxy; }
+#endif // OPENTHREAD_ENABLE_TMF_PROXY && OPENTHREAD_FTD
 
     /**
      * This method returns a reference to the child supervisor object.
@@ -427,7 +429,9 @@ private:
     Mac::Mac mMac;
     MeshForwarder mMeshForwarder;
     Mle::MleRouter mMleRouter;
+#if OPENTHREAD_ENABLE_BORDER_ROUTER
     NetworkData::Local mNetworkDataLocal;
+#endif  // OPENTHREAD_ENABLE_BORDER_ROUTER
     NetworkData::Leader mNetworkDataLeader;
 #if OPENTHREAD_FTD || OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC
     NetworkDiagnostic::NetworkDiagnostic mNetworkDiagnostic;
@@ -451,9 +455,9 @@ private:
     Utils::JamDetector mJamDetector;
 #endif // OPENTHREAD_ENABLE_JAM_DETECTION
 
-#if OPENTHREAD_ENABLE_BORDER_AGENT_PROXY && OPENTHREAD_FTD
-    MeshCoP::BorderAgentProxy mBorderAgentProxy;
-#endif // OPENTHREAD_ENABLE_BORDER_AGENT_PROXY && OPENTHREAD_FTD
+#if OPENTHREAD_ENABLE_TMF_PROXY && OPENTHREAD_FTD
+    TmfProxy mTmfProxy;
+#endif // OPENTHREAD_ENABLE_TMF_PROXY && OPENTHREAD_FTD
 
 #if OPENTHREAD_FTD
     MeshCoP::JoinerRouter mJoinerRouter;

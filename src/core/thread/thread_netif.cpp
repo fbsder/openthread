@@ -82,7 +82,9 @@ ThreadNetif::ThreadNetif(Ip6::Ip6 &aIp6):
     mMac(*this),
     mMeshForwarder(*this),
     mMleRouter(*this),
+#if OPENTHREAD_ENABLE_BORDER_ROUTER
     mNetworkDataLocal(*this),
+#endif
     mNetworkDataLeader(*this),
 #if OPENTHREAD_FTD || OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC
     mNetworkDiagnostic(*this),
@@ -101,9 +103,9 @@ ThreadNetif::ThreadNetif(Ip6::Ip6 &aIp6):
     mJamDetector(*this),
 #endif // OPENTHREAD_ENABLE_JAM_DETECTTION
 #if OPENTHREAD_FTD
-#if OPENTHREAD_ENABLE_BORDER_AGENT_PROXY
-    mBorderAgentProxy(mMleRouter.GetMeshLocal16(), mCoap),
-#endif // OPENTHREAD_ENABLE_BORDER_AGENT_PROXY
+#if OPENTHREAD_ENABLE_TMF_PROXY
+    mTmfProxy(mMleRouter.GetMeshLocal16(), mCoap),
+#endif // OPENTHREAD_ENABLE_TMF_PROXY
     mJoinerRouter(*this),
     mLeader(*this),
     mAddressResolver(*this),

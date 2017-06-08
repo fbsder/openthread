@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2017, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,43 +28,33 @@
 
 /**
  * @file
- *   This file includes definitions for manipulating local Thread Network Data.
+ *   This file implements the OpenThread TMF proxy API.
  */
 
-#ifndef NETWORK_DATA_LOCAL_HPP_
-#define NETWORK_DATA_LOCAL_HPP_
+#include <openthread/tmf_proxy.h>
 
-#include "thread/network_data.hpp"
+#include "openthread-instance.h"
 
-namespace ot {
+#if OPENTHREAD_FTD && OPENTHREAD_ENABLE_TMF_PROXY
 
-class ThreadNetif;
-
-namespace NetworkData {
-
-class Local
+otError otTmfProxyStart(otInstance *aInstance, otTmfProxyStreamHandler aTmfProxyCallback, void *aContext)
 {
-public:
-    explicit Local(ThreadNetif &) { }
+    return aInstance->mThreadNetif.GetTmfProxy().Start(aTmfProxyCallback, aContext);
+}
 
-    void Clear(void) { }
+otError otTmfProxyStop(otInstance *aInstance)
+{
+    return aInstance->mThreadNetif.GetTmfProxy().Stop();
+}
 
-    otError AddOnMeshPrefix(const uint8_t *, uint8_t, int8_t, uint8_t, bool) { return OT_ERROR_NOT_IMPLEMENTED; }
-    otError RemoveOnMeshPrefix(const uint8_t *, uint8_t) { return OT_ERROR_NOT_IMPLEMENTED; }
+otError otTmfProxySend(otInstance *aInstance, otMessage *aMessage, uint16_t aLocator, uint16_t aPort)
+{
+    return aInstance->mThreadNetif.GetTmfProxy().Send(*static_cast<ot::Message *>(aMessage), aLocator, aPort);
+}
 
-    otError AddHasRoutePrefix(const uint8_t *, uint8_t, int8_t, bool) { return OT_ERROR_NOT_IMPLEMENTED; }
-    otError RemoveHasRoutePrefix(const uint8_t *, uint8_t) { return OT_ERROR_NOT_IMPLEMENTED; }
+bool otTmfProxyIsEnabled(otInstance *aInstance)
+{
+    return aInstance->mThreadNetif.GetTmfProxy().IsEnabled();
+}
 
-    otError SendServerDataNotification(void) { return OT_ERROR_NOT_IMPLEMENTED; }
-
-    void GetNetworkData(bool, uint8_t *, uint8_t &aDataLength) { aDataLength = 0; }
-    otError GetNextOnMeshPrefix(otNetworkDataIterator *, otBorderRouterConfig *) { return OT_ERROR_NOT_FOUND; }
-    otError GetNextExternalRoute(otNetworkDataIterator *, otExternalRouteConfig *) { return OT_ERROR_NOT_FOUND; }
-    void ClearResubmitDelayTimer(void) { }
-
-};
-
-}  // namespace NetworkData
-}  // namespace ot
-
-#endif  // NETWORK_DATA_LOCAL_HPP_
+#endif // OPENTHREAD_FTD && OPENTHREAD_ENABLE_TMF_PROXY

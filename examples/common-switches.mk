@@ -26,12 +26,20 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-ifeq ($(BA_PROXY),1)
-configure_OPTIONS              += --enable-border-agent-proxy
+ifeq ($(TMF_PROXY),1)
+configure_OPTIONS              += --enable-tmf-proxy
+endif
+
+ifeq ($(BORDER_ROUTER),1)
+configure_OPTIONS              += --enable-border-router
 endif
 
 ifeq ($(CERT_LOG),1)
 configure_OPTIONS              += --enable-cert-log
+endif
+
+ifeq ($(COAP),1)
+configure_OPTIONS              += --enable-application-coap
 endif
 
 ifeq ($(COMMISSIONER),1)
@@ -52,10 +60,6 @@ endif
 
 ifeq ($(DHCP6_SERVER),1)
 configure_OPTIONS              += --enable-dhcp6-server
-endif
-
-ifeq ($(DEFAULT_LOGGING),1)
-configure_OPTIONS              += --enable-default-logging
 endif
 
 ifeq ($(DISABLE_DOC),1)
@@ -82,6 +86,6 @@ ifeq ($(MAC_WHITELIST),1)
 configure_OPTIONS              += --enable-mac-whitelist
 endif
 
-ifeq ($(COAP),1)
-configure_OPTIONS              += --enable-application-coap
+ifeq ($(MTD_NETDIAG),1)
+configure_OPTIONS              += --enable-mtd-network-diagnostic
 endif

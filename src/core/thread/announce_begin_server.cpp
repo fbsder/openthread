@@ -84,12 +84,12 @@ otError AnnounceBeginServer::SendAnnounce(uint32_t aChannelMask, uint8_t aCount,
     mChannelMask = aChannelMask;
     mCount = aCount;
     mPeriod = aPeriod;
-    mChannel = kPhyMinChannel;
+    mChannel = OT_RADIO_CHANNEL_MIN;
 
     while ((mChannelMask & (1 << mChannel)) == 0)
     {
         mChannel++;
-        VerifyOrExit(mChannel <= kPhyMaxChannel, error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(mChannel <= OT_RADIO_CHANNEL_MAX, error = OT_ERROR_INVALID_ARGS);
     }
 
     mTimer.Start(mPeriod);
@@ -112,7 +112,7 @@ void AnnounceBeginServer::HandleRequest(Coap::Header &aHeader, Message &aMessage
     MeshCoP::PeriodTlv period;
     Ip6::MessageInfo responseInfo(aMessageInfo);
 
-    VerifyOrExit(aHeader.GetCode() == kCoapRequestPost);
+    VerifyOrExit(aHeader.GetCode() == OT_COAP_CODE_POST);
 
     SuccessOrExit(MeshCoP::Tlv::GetTlv(aMessage, MeshCoP::Tlv::kChannelMask, sizeof(channelMask), channelMask));
     VerifyOrExit(channelMask.IsValid());
@@ -154,9 +154,9 @@ void AnnounceBeginServer::HandleTimer(void)
 
         mChannel++;
 
-        if (mChannel > kPhyMaxChannel)
+        if (mChannel > OT_RADIO_CHANNEL_MAX)
         {
-            mChannel = kPhyMinChannel;
+            mChannel = OT_RADIO_CHANNEL_MIN;
             mCount--;
         }
     }

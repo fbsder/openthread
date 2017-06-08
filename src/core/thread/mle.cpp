@@ -95,7 +95,7 @@ Mle::Mle(ThreadNetif &aThreadNetif) :
     mDiscoverContext(NULL),
     mIsDiscoverInProgress(false),
     mEnableEui64Filtering(false),
-    mAnnounceChannel(kPhyMinChannel),
+    mAnnounceChannel(OT_RADIO_CHANNEL_MIN),
     mPreviousChannel(0),
     mPreviousPanId(Mac::kPanIdBroadcast)
 {
@@ -259,7 +259,9 @@ otError Mle::Stop(bool aClearNetworkDatasets)
     mNetif.GetKeyManager().Stop();
     SetStateDetached();
     mNetif.RemoveUnicastAddress(mMeshLocal16);
+#if OPENTHREAD_ENABLE_BORDER_ROUTER
     mNetif.GetNetworkDataLocal().Clear();
+#endif
     mNetif.GetNetworkDataLeader().Clear();
     memset(&mLeaderData, 0, sizeof(mLeaderData));
 
@@ -601,7 +603,9 @@ otError Mle::SetStateChild(uint16_t aRloc16)
         mNetif.GetMle().HandleChildStart(mParentRequestMode);
     }
 
+#if OPENTHREAD_ENABLE_BORDER_ROUTER
     mNetif.GetNetworkDataLocal().ClearResubmitDelayTimer();
+#endif
     mNetif.GetIp6().SetForwardingEnabled(false);
     mNetif.GetIp6().mMpl.SetTimerExpirations(kMplChildDataMessageTimerExpirations);
 
@@ -673,6 +677,11 @@ otError Mle::SetDeviceMode(uint8_t aDeviceMode)
 
 exit:
     return error;
+}
+
+const Ip6::Address &Mle::GetLinkLocalAddress(void) const
+{
+    return mLinkLocal64.GetAddress();
 }
 
 otError Mle::UpdateLinkLocalAddress(void)
@@ -1259,7 +1268,9 @@ void Mle::HandleNetifStateChanged(uint32_t aFlags)
             mSendChildUpdateRequest.Post();
         }
 
+#if OPENTHREAD_ENABLE_BORDER_ROUTER
         mNetif.GetNetworkDataLocal().SendServerDataNotification();
+#endif
     }
 
     if (aFlags & (OT_NET_ROLE | OT_NET_KEY_SEQUENCE_COUNTER))
@@ -1866,9 +1877,9 @@ void Mle::SendOrphanAnnounce(void)
     {
         channel++;
 
-        if (channel > kPhyMaxChannel)
+        if (channel > OT_RADIO_CHANNEL_MAX)
         {
-            channel = kPhyMinChannel;
+            channel = OT_RADIO_CHANNEL_MIN;
         }
 
         VerifyOrExit(channel != mAnnounceChannel);
@@ -1880,9 +1891,9 @@ void Mle::SendOrphanAnnounce(void)
     // Move to next channel
     mAnnounceChannel = channel + 1;
 
-    if (mAnnounceChannel > kPhyMaxChannel)
+    if (mAnnounceChannel > OT_RADIO_CHANNEL_MAX)
     {
-        mAnnounceChannel = kPhyMinChannel;
+        mAnnounceChannel = OT_RADIO_CHANNEL_MIN;
     }
 
 exit:
@@ -2204,7 +2215,7 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
     case Header::kCommandChildUpdateRequest:
         if (mRole == OT_DEVICE_ROLE_LEADER || mRole == OT_DEVICE_ROLE_ROUTER)
         {
-            mNetif.GetMle().HandleChildUpdateRequest(aMessage, aMessageInfo);
+            mNetif.GetMle().HandleChildUpdateRequest(aMessage, aMessageInfo, keySequence);
         }
         else
         {

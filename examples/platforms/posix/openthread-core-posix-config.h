@@ -28,36 +28,19 @@
 
 /**
  * @file
- *   This file implements the OpenThread Border Agent Proxy API.
+ *   This file includes posix compile-time configuration constants
+ *   for OpenThread.
  */
 
-#include <openthread/border_agent_proxy.h>
+#ifndef OPENTHREAD_CORE_POSIX_CONFIG_H_
+#define OPENTHREAD_CORE_POSIX_CONFIG_H_
 
-#include "openthread-instance.h"
+/**
+ * @def OPENTHREAD_CONFIG_ENABLE_DEFAULT_LOG_OUTPUT
+ *
+ * Define to 1 to enable default log output.
+ *
+ */
+#define OPENTHREAD_CONFIG_ENABLE_DEFAULT_LOG_OUTPUT             1
 
-using namespace ot;
-
-#if OPENTHREAD_FTD && OPENTHREAD_ENABLE_BORDER_AGENT_PROXY
-
-otError otBorderAgentProxyStart(otInstance *aInstance, otBorderAgentProxyStreamHandler aBorderAgentProxyCallback,
-                                void *aContext)
-{
-    return aInstance->mThreadNetif.GetBorderAgentProxy().Start(aBorderAgentProxyCallback, aContext);
-}
-
-otError otBorderAgentProxyStop(otInstance *aInstance)
-{
-    return aInstance->mThreadNetif.GetBorderAgentProxy().Stop();
-}
-
-otError otBorderAgentProxySend(otInstance *aInstance, otMessage *aMessage, uint16_t aLocator, uint16_t aPort)
-{
-    return aInstance->mThreadNetif.GetBorderAgentProxy().Send(*static_cast<Message *>(aMessage), aLocator, aPort);
-}
-
-bool otBorderAgentProxyIsEnabled(otInstance *aInstance)
-{
-    return aInstance->mThreadNetif.GetBorderAgentProxy().IsEnabled();
-}
-
-#endif // OPENTHREAD_FTD && OPENTHREAD_ENABLE_BORDER_AGENT_PROXY
+#endif  // OPENTHREAD_CORE_POSIX_CONFIG_H_
