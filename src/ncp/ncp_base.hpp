@@ -33,11 +33,7 @@
 #ifndef NCP_BASE_HPP_
 #define NCP_BASE_HPP_
 
-#ifdef OPENTHREAD_CONFIG_FILE
-#include OPENTHREAD_CONFIG_FILE
-#else
-#include <openthread-config.h>
-#endif
+#include <openthread/config.h>
 
 #include <openthread/ip6.h>
 #include <openthread/message.h>
@@ -334,10 +330,12 @@ private:
     otError CommandHandler_PROP_VALUE_REMOVE(uint8_t header, unsigned int command, const uint8_t *arg_ptr,
                                              uint16_t arg_len);
     otError CommandHandler_NET_SAVE(uint8_t header, unsigned int command, const uint8_t *arg_ptr, uint16_t arg_len);
-    otError CommandHandler_NET_CLEAR(uint8_t header, unsigned int command, const uint8_t *arg_ptr,
-                                     uint16_t arg_len);
-    otError CommandHandler_NET_RECALL(uint8_t header, unsigned int command, const uint8_t *arg_ptr,
-                                      uint16_t arg_len);
+    otError CommandHandler_NET_CLEAR(uint8_t header, unsigned int command, const uint8_t *arg_ptr, uint16_t arg_len);
+    otError CommandHandler_NET_RECALL(uint8_t header, unsigned int command, const uint8_t *arg_ptr, uint16_t arg_len);
+#if OPENTHREAD_CONFIG_NCP_ENABLE_PEEK_POKE
+    otError CommandHandler_PEEK(uint8_t header, unsigned int command, const uint8_t *arg_ptr, uint16_t arg_len);
+    otError CommandHandler_POKE(uint8_t header, unsigned int command, const uint8_t *arg_ptr, uint16_t arg_len);
+#endif
 
     otError GetPropertyHandler_ChannelMaskHelper(uint8_t header, spinel_prop_key_t key, uint32_t channel_mask);
 
@@ -405,6 +403,7 @@ private:
     otError GetPropertyHandler_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE(uint8_t header, spinel_prop_key_t key);
     otError GetPropertyHandler_MAC_CNTR(uint8_t header, spinel_prop_key_t key);
     otError GetPropertyHandler_NCP_CNTR(uint8_t header, spinel_prop_key_t key);
+    otError GetPropertyHandler_IP_CNTR(uint8_t header, spinel_prop_key_t key);
     otError GetPropertyHandler_MSG_BUFFER_COUNTERS(uint8_t header, spinel_prop_key_t key);
 #if OPENTHREAD_ENABLE_MAC_WHITELIST
     otError GetPropertyHandler_MAC_WHITELIST(uint8_t header, spinel_prop_key_t key);
@@ -455,6 +454,7 @@ private:
     otError GetPropertyHandler_NEST_LEGACY_ULA_PREFIX(uint8_t header, spinel_prop_key_t key);
 #endif
 
+    otError SendSetPropertyResponse(uint8_t aHeader, spinel_prop_key_t aKey, otError aError);
 
     otError SetPropertyHandler_POWER_STATE(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
                                            uint16_t value_len);
@@ -677,6 +677,11 @@ private:
 public:
     otError StreamWrite(int aStreamId, const uint8_t *aDataPtr, int aDataLen);
 
+#if OPENTHREAD_CONFIG_NCP_ENABLE_PEEK_POKE
+    void RegisterPeekPokeDelagates(otNcpDelegateAllowPeekPoke aAllowPeekDelegate,
+                                   otNcpDelegateAllowPeekPoke aAllowPokeDelegate);
+#endif
+
 #if OPENTHREAD_ENABLE_LEGACY
 public:
     void HandleLegacyNodeDidJoin(const otExtAddress *aExtAddr);
@@ -712,6 +717,11 @@ private:
 
 #if OPENTHREAD_ENABLE_JAM_DETECTION
     bool mShouldSignalJamStateChange;
+#endif
+
+#if OPENTHREAD_CONFIG_NCP_ENABLE_PEEK_POKE
+    otNcpDelegateAllowPeekPoke mAllowPeekDelegate;
+    otNcpDelegateAllowPeekPoke mAllowPokeDelegate;
 #endif
 
     spinel_tid_t mDroppedReplyTid;
