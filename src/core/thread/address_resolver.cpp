@@ -491,6 +491,13 @@ void AddressResolver::HandleAddressError(Coap::Header &aHeader, Message &aMessag
     }
 
 exit:
+
+    if (error != OT_ERROR_NONE)
+    {
+        otLogWarnArp(GetInstance(), "Error while processing address error notification: %s",
+                     otThreadErrorToString(error));
+    }
+
     return;
 }
 
@@ -662,7 +669,7 @@ void AddressResolver::HandleIcmpReceive(void *aContext, otMessage *aMessage, con
                                                                 *static_cast<const Ip6::MessageInfo *>(aMessageInfo),
                                                                 *static_cast<const Ip6::IcmpHeader *>(aIcmpHeader));
 
-    (void)aMessageInfo;
+    OT_UNUSED_VARIABLE(aMessageInfo);
 }
 
 void AddressResolver::HandleIcmpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo,
@@ -685,7 +692,7 @@ void AddressResolver::HandleIcmpReceive(Message &aMessage, const Ip6::MessageInf
     }
 
 exit:
-    (void)aMessageInfo;
+    OT_UNUSED_VARIABLE(aMessageInfo);
 }
 
 }  // namespace ot

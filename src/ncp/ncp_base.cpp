@@ -74,16 +74,10 @@
 namespace ot {
 
 #define NCP_INVALID_SCAN_CHANNEL              (-1)
-#define NCP_PLAT_RESET_REASON                 (1U<<31)
-#define NCP_ON_MESH_NETS_CHANGED_BIT_FLAG     (1U<<30)
 
-enum
-{
-    kThreadMode_RxOnWhenIdle        = (1 << 3),
-    kThreadMode_SecureDataRequest   = (1 << 2),
-    kThreadMode_FullFunctionDevice  = (1 << 1),
-    kThreadMode_FullNetworkData     = (1 << 0),
-};
+#define NCP_CHANGED_PLATFORM_RESET            (1U << 31)
+#define NCP_CHANGED_THREAD_ON_MESH_NETS       (1U << 30)
+#define NCP_CHANGED_THREAD_OFF_MESH_ROUTES    (1U << 29)
 
 #define RSSI_OVERRIDE_DISABLED        127 // Used for PROP_MAC_WHITELIST
 
@@ -481,7 +475,7 @@ static spinel_status_t ThreadErrorToSpinelStatus(otError aError)
 
     default:
         // Unknown error code. Wrap it as a Spinel status and return that.
-        ret = static_cast<spinel_status_t>(SPINEL_STATUS_STACK_NATIVE__BEGIN + aError);
+        ret = static_cast<spinel_status_t>(SPINEL_STATUS_STACK_NATIVE__BEGIN + static_cast<uint32_t>(aError));
         break;
     }
 
@@ -573,6 +567,33 @@ static uint8_t BorderRouterConfigToFlagByte(const otBorderRouterConfig &aConfig)
     return flags;
 }
 
+static uint8_t LinkFlagsToFlagByte(bool aRxOnWhenIdle, bool aSecureDataRequests, bool aDeviceType, bool aNetworkData)
+{
+    uint8_t flags(0);
+
+    if (aRxOnWhenIdle)
+    {
+        flags |= SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE;
+    }
+
+    if (aSecureDataRequests)
+    {
+        flags |= SPINEL_THREAD_MODE_SECURE_DATA_REQUEST;
+    }
+
+    if (aDeviceType)
+    {
+        flags |= SPINEL_THREAD_MODE_FULL_FUNCTION_DEV;
+    }
+
+    if (aNetworkData)
+    {
+        flags |= SPINEL_THREAD_MODE_FULL_NETWORK_DATA;
+    }
+
+    return flags;
+}
+
 static uint8_t ExternalRoutePreferenceToFlagByte(int aPreference)
 {
     uint8_t flags;
@@ -642,7 +663,7 @@ NcpBase::NcpBase(otInstance *aInstance):
     mDiscoveryScanEnableFiltering(false),
     mDiscoveryScanPanId(0xffff),
     mUpdateChangedPropsTask(aInstance->mIp6.mTaskletScheduler, &NcpBase::UpdateChangedProps, this),
-    mChangedFlags(NCP_PLAT_RESET_REASON),
+    mChangedFlags(NCP_CHANGED_PLATFORM_RESET),
     mShouldSignalEndOfScan(false),
     mHostPowerState(SPINEL_HOST_POWER_STATE_ONLINE),
     mHostPowerStateInProgress(false),
@@ -863,7 +884,6 @@ void NcpBase::HandleRawFrame(const otRadioFrame *aFrame, void *aContext)
 
 void NcpBase::HandleRawFrame(const otRadioFrame *aFrame)
 {
-    otError error = OT_ERROR_NONE;
     uint16_t flags = 0;
 
     if (!mIsRawStreamEnabled)
@@ -871,7 +891,7 @@ void NcpBase::HandleRawFrame(const otRadioFrame *aFrame)
         goto exit;
     }
 
-    SuccessOrExit(error = OutboundFrameBegin());
+    SuccessOrExit(OutboundFrameBegin());
 
     if (aFrame->mDidTX)
     {
@@ -880,37 +900,37 @@ void NcpBase::HandleRawFrame(const otRadioFrame *aFrame)
 
     // Append frame header and frame length
     SuccessOrExit(
-        error = OutboundFrameFeedPacked(
-                    SPINEL_DATATYPE_COMMAND_PROP_S SPINEL_DATATYPE_UINT16_S,
-                    SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0,
-                    SPINEL_CMD_PROP_VALUE_IS,
-                    SPINEL_PROP_STREAM_RAW,
-                    aFrame->mLength
-                ));
+        OutboundFrameFeedPacked(
+            SPINEL_DATATYPE_COMMAND_PROP_S SPINEL_DATATYPE_UINT16_S,
+            SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0,
+            SPINEL_CMD_PROP_VALUE_IS,
+            SPINEL_PROP_STREAM_RAW,
+            aFrame->mLength
+        ));
 
     // Append the frame contents
-    SuccessOrExit(error = OutboundFrameFeedData(aFrame->mPsdu, aFrame->mLength));
+    SuccessOrExit(OutboundFrameFeedData(aFrame->mPsdu, aFrame->mLength));
 
     // Append metadata (rssi, etc)
     SuccessOrExit(
-        error = OutboundFrameFeedPacked(
-                    SPINEL_DATATYPE_INT8_S
-                    SPINEL_DATATYPE_INT8_S
-                    SPINEL_DATATYPE_UINT16_S
-                    SPINEL_DATATYPE_STRUCT_S(  // PHY-data
-                        SPINEL_DATATYPE_NULL_S // Empty for now
-                    )
-                    SPINEL_DATATYPE_STRUCT_S(  // Vendor-data
-                        SPINEL_DATATYPE_NULL_S // Empty for now
-                    ),
-                    aFrame->mPower,   // TX Power
-                    -128,             // Noise Floor (Currently unused)
-                    flags             // Flags
+        OutboundFrameFeedPacked(
+            SPINEL_DATATYPE_INT8_S
+            SPINEL_DATATYPE_INT8_S
+            SPINEL_DATATYPE_UINT16_S
+            SPINEL_DATATYPE_STRUCT_S(  // PHY-data
+                SPINEL_DATATYPE_NULL_S // Empty for now
+            )
+            SPINEL_DATATYPE_STRUCT_S(  // Vendor-data
+                SPINEL_DATATYPE_NULL_S // Empty for now
+            ),
+            aFrame->mPower,   // TX Power
+            -128,             // Noise Floor (Currently unused)
+            flags             // Flags
 
-                   // Skip PHY and Vendor data for now
-                ));
+           // Skip PHY and Vendor data for now
+        ));
 
-    SuccessOrExit(error = OutboundFrameSend());
+    SuccessOrExit(OutboundFrameSend());
 
 exit:
     return;
@@ -1047,10 +1067,9 @@ void NcpBase::LinkRawReceiveDone(otInstance *, otRadioFrame *aFrame, otError aEr
 
 void NcpBase::LinkRawReceiveDone(otRadioFrame *aFrame, otError aError)
 {
-    otError error = OT_ERROR_NONE;
     uint16_t flags = 0;
 
-    SuccessOrExit(error = OutboundFrameBegin());
+    SuccessOrExit(OutboundFrameBegin());
 
     if (aFrame->mDidTX)
     {
@@ -1059,42 +1078,42 @@ void NcpBase::LinkRawReceiveDone(otRadioFrame *aFrame, otError aError)
 
     // Append frame header and frame length
     SuccessOrExit(
-        error = OutboundFrameFeedPacked(
-                    SPINEL_DATATYPE_COMMAND_PROP_S SPINEL_DATATYPE_UINT16_S,
-                    SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0,
-                    SPINEL_CMD_PROP_VALUE_IS,
-                    SPINEL_PROP_STREAM_RAW,
-                    (aError == OT_ERROR_NONE) ? aFrame->mLength : 0
-                ));
+        OutboundFrameFeedPacked(
+            SPINEL_DATATYPE_COMMAND_PROP_S SPINEL_DATATYPE_UINT16_S,
+            SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0,
+            SPINEL_CMD_PROP_VALUE_IS,
+            SPINEL_PROP_STREAM_RAW,
+            (aError == OT_ERROR_NONE) ? aFrame->mLength : 0
+        ));
 
     if (aError == OT_ERROR_NONE)
     {
         // Append the frame contents
-        SuccessOrExit(error = OutboundFrameFeedData(aFrame->mPsdu, aFrame->mLength));
+        SuccessOrExit(OutboundFrameFeedData(aFrame->mPsdu, aFrame->mLength));
     }
 
     // Append metadata (rssi, etc)
     SuccessOrExit(
-        error = OutboundFrameFeedPacked(
-                    SPINEL_DATATYPE_INT8_S
-                    SPINEL_DATATYPE_INT8_S
-                    SPINEL_DATATYPE_UINT16_S
-                    SPINEL_DATATYPE_STRUCT_S( // PHY-data
-                        SPINEL_DATATYPE_UINT8_S // 802.15.4 channel
-                        SPINEL_DATATYPE_UINT8_S // 802.15.4 LQI
-                    )
-                    SPINEL_DATATYPE_STRUCT_S( // Vendor-data
-                        SPINEL_DATATYPE_UINT_PACKED_S
-                    ),
-                    aFrame->mPower,    // TX Power
-                    -128,              // Noise Floor (Currently unused)
-                    flags,             // Flags
-                    aFrame->mChannel,  // Receive channel
-                    aFrame->mLqi,      // Link quality indicator
-                    aError             // Receive error
-                ));
+        OutboundFrameFeedPacked(
+            SPINEL_DATATYPE_INT8_S
+            SPINEL_DATATYPE_INT8_S
+            SPINEL_DATATYPE_UINT16_S
+            SPINEL_DATATYPE_STRUCT_S( // PHY-data
+                SPINEL_DATATYPE_UINT8_S // 802.15.4 channel
+                SPINEL_DATATYPE_UINT8_S // 802.15.4 LQI
+            )
+            SPINEL_DATATYPE_STRUCT_S( // Vendor-data
+                SPINEL_DATATYPE_UINT_PACKED_S
+            ),
+            aFrame->mPower,    // TX Power
+            -128,              // Noise Floor (Currently unused)
+            flags,             // Flags
+            aFrame->mChannel,  // Receive channel
+            aFrame->mLqi,      // Link quality indicator
+            aError             // Receive error
+        ));
 
-    SuccessOrExit(error = OutboundFrameSend());
+    SuccessOrExit(OutboundFrameSend());
 
 exit:
     return;
@@ -1183,7 +1202,7 @@ void NcpBase::UpdateChangedProps(void)
 {
     while (mChangedFlags != 0)
     {
-        if ((mChangedFlags & NCP_PLAT_RESET_REASON) != 0)
+        if ((mChangedFlags & NCP_CHANGED_PLATFORM_RESET) != 0)
         {
             SuccessOrExit(
                 SendLastStatus(
@@ -1191,7 +1210,7 @@ void NcpBase::UpdateChangedProps(void)
                     ResetReasonToSpinelStatus(otPlatGetResetReason(mInstance))
                 ));
 
-            mChangedFlags &= ~static_cast<uint32_t>(NCP_PLAT_RESET_REASON);
+            mChangedFlags &= ~static_cast<uint32_t>(NCP_CHANGED_PLATFORM_RESET);
         }
         else if ((mChangedFlags & OT_CHANGED_THREAD_LL_ADDR) != 0)
         {
@@ -1322,12 +1341,13 @@ void NcpBase::UpdateChangedProps(void)
             mChangedFlags &= ~static_cast<uint32_t>(OT_CHANGED_THREAD_NETDATA);
 
             // If the network data is updated, after successfully sending (or queuing) the
-            // network data spinel message, we add `NCP_ON_MESH_NETS_CHANGED_BIT_FLAG` to
-            // the `mChangedFlags` so that we separately send the list of on-mesh prefixes.
+            // network data spinel message, we add `NCP_CHANGED_THREAD_ON_MESH_NETS` and
+            // `NCP_CHANGED_THREAD_OFF_MESH_ROUTES` to the `mChangedFlags` so that we
+            // separately send the list of on-mesh prefixes and off-mesh routes.
 
-            mChangedFlags |= NCP_ON_MESH_NETS_CHANGED_BIT_FLAG;
+            mChangedFlags |= NCP_CHANGED_THREAD_ON_MESH_NETS | NCP_CHANGED_THREAD_OFF_MESH_ROUTES;
         }
-        else if ((mChangedFlags & NCP_ON_MESH_NETS_CHANGED_BIT_FLAG) != 0)
+        else if ((mChangedFlags & NCP_CHANGED_THREAD_ON_MESH_NETS) != 0)
         {
             SuccessOrExit(
                 HandleCommandPropertyGet(
@@ -1335,7 +1355,17 @@ void NcpBase::UpdateChangedProps(void)
                     SPINEL_PROP_THREAD_ON_MESH_NETS
                 ));
 
-            mChangedFlags &= ~static_cast<uint32_t>(NCP_ON_MESH_NETS_CHANGED_BIT_FLAG);
+            mChangedFlags &= ~static_cast<uint32_t>(NCP_CHANGED_THREAD_ON_MESH_NETS);
+        }
+        else if ((mChangedFlags & NCP_CHANGED_THREAD_OFF_MESH_ROUTES) != 0)
+        {
+            SuccessOrExit(
+                HandleCommandPropertyGet(
+                    SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0,
+                    SPINEL_PROP_THREAD_OFF_MESH_ROUTES
+                ));
+
+            mChangedFlags &= ~static_cast<uint32_t>(NCP_CHANGED_THREAD_OFF_MESH_ROUTES);
         }
         else if ((mChangedFlags & (OT_CHANGED_THREAD_RLOC_ADDED | OT_CHANGED_THREAD_RLOC_REMOVED)) != 0)
         {
@@ -1437,7 +1467,7 @@ void NcpBase::HandleReceive(const uint8_t *aBuf, uint16_t aBufLength)
 void NcpBase::HandleFrameRemovedFromNcpBuffer(void *aContext, NcpFrameBuffer::FrameTag aFrameTag,
                                               NcpFrameBuffer *aNcpBuffer)
 {
-    (void)aNcpBuffer;
+    OT_UNUSED_VARIABLE(aNcpBuffer);
     static_cast<NcpBase *>(aContext)->HandleFrameRemovedFromNcpBuffer(aFrameTag);
 }
 
@@ -1803,9 +1833,9 @@ otError NcpBase::OutboundFrameFeedPacked(const char *aPackFormat, ...)
 
 otError NcpBase::CommandHandler_NOOP(uint8_t aHeader, unsigned int aCommand, const uint8_t *aArgPtr, uint16_t aArgLen)
 {
-    (void)aCommand;
-    (void)aArgPtr;
-    (void)aArgLen;
+    OT_UNUSED_VARIABLE(aCommand);
+    OT_UNUSED_VARIABLE(aArgPtr);
+    OT_UNUSED_VARIABLE(aArgLen);
 
     return SendLastStatus(aHeader, SPINEL_STATUS_OK);
 }
@@ -1816,10 +1846,10 @@ otError NcpBase::CommandHandler_RESET(uint8_t aHeader, unsigned int aCommand, co
     otError error = OT_ERROR_NONE;
 
     // We aren't using any of the arguments to this function.
-    (void)aHeader;
-    (void)aCommand;
-    (void)aArgPtr;
-    (void)aArgLen;
+    OT_UNUSED_VARIABLE(aHeader);
+    OT_UNUSED_VARIABLE(aCommand);
+    OT_UNUSED_VARIABLE(aArgPtr);
+    OT_UNUSED_VARIABLE(aArgLen);
 
     // Signal a platform reset. If implemented, this function
     // shouldn't return.
@@ -1836,7 +1866,7 @@ otError NcpBase::CommandHandler_RESET(uint8_t aHeader, unsigned int aCommand, co
 
     if (error != OT_ERROR_NONE)
     {
-        mChangedFlags |= NCP_PLAT_RESET_REASON;
+        mChangedFlags |= NCP_CHANGED_PLATFORM_RESET;
         mUpdateChangedPropsTask.Post();
     }
 
@@ -1861,7 +1891,7 @@ otError NcpBase::CommandHandler_PROP_VALUE_GET(uint8_t aHeader, unsigned int aCo
         error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
     }
 
-    (void)aCommand;
+    OT_UNUSED_VARIABLE(aCommand);
 
     return error;
 }
@@ -1898,7 +1928,7 @@ otError NcpBase::CommandHandler_PROP_VALUE_SET(uint8_t aHeader, unsigned int aCo
         error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
     }
 
-    (void)aCommand;
+    OT_UNUSED_VARIABLE(aCommand);
 
     return error;
 }
@@ -1935,7 +1965,7 @@ otError NcpBase::CommandHandler_PROP_VALUE_INSERT(uint8_t aHeader, unsigned int 
         error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
     }
 
-    (void)aCommand;
+    OT_UNUSED_VARIABLE(aCommand);
 
     return error;
 }
@@ -1972,7 +2002,7 @@ otError NcpBase::CommandHandler_PROP_VALUE_REMOVE(uint8_t aHeader, unsigned int 
         error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
     }
 
-    (void)aCommand;
+    OT_UNUSED_VARIABLE(aCommand);
 
     return error;
 }
@@ -1980,9 +2010,9 @@ otError NcpBase::CommandHandler_PROP_VALUE_REMOVE(uint8_t aHeader, unsigned int 
 otError NcpBase::CommandHandler_NET_SAVE(uint8_t aHeader, unsigned int aCommand, const uint8_t *aArgPtr,
                                          uint16_t aArgLen)
 {
-    (void)aCommand;
-    (void)aArgPtr;
-    (void)aArgLen;
+    OT_UNUSED_VARIABLE(aCommand);
+    OT_UNUSED_VARIABLE(aArgPtr);
+    OT_UNUSED_VARIABLE(aArgLen);
 
     return SendLastStatus(aHeader, SPINEL_STATUS_UNIMPLEMENTED);
 }
@@ -1990,9 +2020,9 @@ otError NcpBase::CommandHandler_NET_SAVE(uint8_t aHeader, unsigned int aCommand,
 otError NcpBase::CommandHandler_NET_CLEAR(uint8_t aHeader, unsigned int aCommand, const uint8_t *aArgPtr,
                                           uint16_t aArgLen)
 {
-    (void)aCommand;
-    (void)aArgPtr;
-    (void)aArgLen;
+    OT_UNUSED_VARIABLE(aCommand);
+    OT_UNUSED_VARIABLE(aArgPtr);
+    OT_UNUSED_VARIABLE(aArgLen);
 
     return SendLastStatus(aHeader, ThreadErrorToSpinelStatus(otInstanceErasePersistentInfo(mInstance)));
 }
@@ -2000,9 +2030,9 @@ otError NcpBase::CommandHandler_NET_CLEAR(uint8_t aHeader, unsigned int aCommand
 otError NcpBase::CommandHandler_NET_RECALL(uint8_t aHeader, unsigned int aCommand, const uint8_t *aArgPtr,
                                            uint16_t aArgLen)
 {
-    (void)aCommand;
-    (void)aArgPtr;
-    (void)aArgLen;
+    OT_UNUSED_VARIABLE(aCommand);
+    OT_UNUSED_VARIABLE(aArgPtr);
+    OT_UNUSED_VARIABLE(aArgLen);
 
     return SendLastStatus(aHeader, SPINEL_STATUS_UNIMPLEMENTED);
 }
@@ -2059,7 +2089,7 @@ exit:
         error = SendLastStatus(aHeader, spinelError);
     }
 
-    (void)aCommand;
+    OT_UNUSED_VARIABLE(aCommand);
 
     return error;
 }
@@ -2103,7 +2133,7 @@ otError NcpBase::CommandHandler_POKE(uint8_t aHeader, unsigned int aCommand, con
 exit:
     error = SendLastStatus(aHeader, spinelError);
 
-    (void)aCommand;
+    OT_UNUSED_VARIABLE(aCommand);
 
     return error;
 }
@@ -2269,7 +2299,7 @@ otError NcpBase::GetPropertyHandler_HWADDR(uint8_t aHeader, spinel_prop_key_t aK
 otError NcpBase::GetPropertyHandler_LOCK(uint8_t aHeader, spinel_prop_key_t aKey)
 {
     // TODO: Implement property lock (Needs API!)
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     return SendLastStatus(aHeader, SPINEL_STATUS_UNIMPLEMENTED);
 }
@@ -2944,27 +2974,10 @@ otError NcpBase::GetPropertyHandler_THREAD_CHILD_TABLE(uint8_t aHeader, spinel_p
             continue;
         }
 
-        modeFlags = 0;
-
-        if (childInfo.mRxOnWhenIdle)
-        {
-            modeFlags |= kThreadMode_RxOnWhenIdle;
-        }
-
-        if (childInfo.mSecureDataRequest)
-        {
-            modeFlags |= kThreadMode_SecureDataRequest;
-        }
-
-        if (childInfo.mFullFunction)
-        {
-            modeFlags |= kThreadMode_FullFunctionDevice;
-        }
-
-        if (childInfo.mFullNetworkData)
-        {
-            modeFlags |= kThreadMode_FullNetworkData;
-        }
+        modeFlags = LinkFlagsToFlagByte(childInfo.mRxOnWhenIdle,
+                                        childInfo.mSecureDataRequest,
+                                        childInfo.mFullFunction,
+                                        childInfo.mFullNetworkData);
 
         SuccessOrExit(
             error = OutboundFrameFeedPacked(
@@ -3014,27 +3027,10 @@ otError NcpBase::GetPropertyHandler_THREAD_NEIGHBOR_TABLE(uint8_t aHeader, spine
 
     while (otThreadGetNextNeighborInfo(mInstance, &iter, &neighInfo) == OT_ERROR_NONE)
     {
-        modeFlags = 0;
-
-        if (neighInfo.mRxOnWhenIdle)
-        {
-            modeFlags |= kThreadMode_RxOnWhenIdle;
-        }
-
-        if (neighInfo.mSecureDataRequest)
-        {
-            modeFlags |= kThreadMode_SecureDataRequest;
-        }
-
-        if (neighInfo.mFullFunction)
-        {
-            modeFlags |= kThreadMode_FullFunctionDevice;
-        }
-
-        if (neighInfo.mFullNetworkData)
-        {
-            modeFlags |= kThreadMode_FullNetworkData;
-        }
+        modeFlags = LinkFlagsToFlagByte(neighInfo.mRxOnWhenIdle,
+                                        neighInfo.mSecureDataRequest,
+                                        neighInfo.mFullFunction,
+                                        neighInfo.mFullNetworkData);
 
         SuccessOrExit(
             error = OutboundFrameFeedPacked(
@@ -3368,7 +3364,7 @@ exit:
 otError NcpBase::GetPropertyHandler_IPV6_ROUTE_TABLE(uint8_t aHeader, spinel_prop_key_t aKey)
 {
     // TODO: Implement get route table
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     return SendLastStatus(aHeader, SPINEL_STATUS_UNIMPLEMENTED);
 }
@@ -3467,7 +3463,7 @@ exit:
 otError NcpBase::GetPropertyHandler_STREAM_NET(uint8_t aHeader, spinel_prop_key_t aKey)
 {
     // TODO: Implement explicit data poll.
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     return SendLastStatus(aHeader, SPINEL_STATUS_UNIMPLEMENTED);
 }
@@ -3700,7 +3696,6 @@ otError NcpBase::GetPropertyHandler_MAC_CNTR(uint8_t aHeader, spinel_prop_key_t 
     default:
         error = SendLastStatus(aHeader, SPINEL_STATUS_INTERNAL_ERROR);
         ExitNow();
-        break;
     }
 
     error = SendPropertyUpdate(
@@ -3765,7 +3760,6 @@ otError NcpBase::GetPropertyHandler_NCP_CNTR(uint8_t aHeader, spinel_prop_key_t 
     default:
         error = SendLastStatus(aHeader, SPINEL_STATUS_INTERNAL_ERROR);
         ExitNow();
-        break;
     }
 
     error = SendPropertyUpdate(
@@ -3892,13 +3886,15 @@ otError NcpBase::GetPropertyHandler_DEBUG_TEST_ASSERT(uint8_t aHeader, spinel_pr
     // In such a case we return `false` as the
     // property value to indicate this.
 
-    return SendPropertyUpdate(
-               aHeader,
-               SPINEL_CMD_PROP_VALUE_IS,
-               aKey,
-               SPINEL_DATATYPE_BOOL_S,
-               false
-           );
+    OT_UNREACHABLE_CODE(
+        return SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_IS,
+                aKey,
+                SPINEL_DATATYPE_BOOL_S,
+                false
+            );
+    )
 }
 
 otError NcpBase::GetPropertyHandler_DEBUG_NCP_LOG_LEVEL(uint8_t aHeader, spinel_prop_key_t aKey)
@@ -4075,28 +4071,13 @@ otError NcpBase::GetPropertyHandler_NET_PSKC(uint8_t aHeader, spinel_prop_key_t 
 
 otError NcpBase::GetPropertyHandler_THREAD_MODE(uint8_t aHeader, spinel_prop_key_t aKey)
 {
-    uint8_t numericMode = 0;
+    uint8_t numericMode;
     otLinkModeConfig modeConfig = otThreadGetLinkMode(mInstance);
 
-    if (modeConfig.mRxOnWhenIdle)
-    {
-        numericMode |= kThreadMode_RxOnWhenIdle;
-    }
-
-    if (modeConfig.mSecureDataRequests)
-    {
-        numericMode |= kThreadMode_SecureDataRequest;
-    }
-
-    if (modeConfig.mDeviceType)
-    {
-        numericMode |= kThreadMode_FullFunctionDevice;
-    }
-
-    if (modeConfig.mNetworkData)
-    {
-        numericMode |= kThreadMode_FullNetworkData;
-    }
+    numericMode = LinkFlagsToFlagByte(modeConfig.mRxOnWhenIdle,
+                                      modeConfig.mSecureDataRequests,
+                                      modeConfig.mDeviceType,
+                                      modeConfig.mNetworkData);
 
     return SendPropertyUpdate(
                aHeader,
@@ -4266,9 +4247,9 @@ otError NcpBase::SetPropertyHandler_POWER_STATE(uint8_t aHeader, spinel_prop_key
                                                 uint16_t aValueLen)
 {
     // TODO: Implement POWER_STATE
-    (void)aKey;
-    (void)aValuePtr;
-    (void)aValueLen;
+    OT_UNUSED_VARIABLE(aKey);
+    OT_UNUSED_VARIABLE(aValuePtr);
+    OT_UNUSED_VARIABLE(aValueLen);
 
     return SendLastStatus(aHeader, SPINEL_STATUS_UNIMPLEMENTED);
 }
@@ -4841,7 +4822,7 @@ exit:
         error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
     }
 
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     return error;
 }
@@ -5131,9 +5112,9 @@ otError NcpBase::SetPropertyHandler_STREAM_NET_INSECURE(uint8_t aHeader, spinel_
 
     // We ignore metadata for now.
     // May later include TX power, allow retransmits, etc...
-    (void)metaPtr;
-    (void)metaLen;
-    (void)parsedLength;
+    OT_UNUSED_VARIABLE(metaPtr);
+    OT_UNUSED_VARIABLE(metaLen);
+    OT_UNUSED_VARIABLE(parsedLength);
 
     SuccessOrExit(error = otMessageAppend(message, framePtr, static_cast<uint16_t>(frameLen)));
 
@@ -5171,7 +5152,7 @@ exit:
         error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
     }
 
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     return error;
 }
@@ -5238,7 +5219,7 @@ exit:
         error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
     }
 
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     return error;
 }
@@ -5274,9 +5255,9 @@ otError NcpBase::SetPropertyHandler_STREAM_NET(uint8_t aHeader, spinel_prop_key_
 
     // We ignore metadata for now.
     // May later include TX power, allow retransmits, etc...
-    (void)metaPtr;
-    (void)metaLen;
-    (void)parsedLength;
+    OT_UNUSED_VARIABLE(metaPtr);
+    OT_UNUSED_VARIABLE(metaLen);
+    OT_UNUSED_VARIABLE(parsedLength);
 
     SuccessOrExit(error = otMessageAppend(message, framePtr, static_cast<uint16_t>(frameLen)));
 
@@ -5312,7 +5293,7 @@ exit:
         error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
     }
 
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     return error;
 }
@@ -5557,7 +5538,7 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_ENABLE_STEERING_DATA_SET_OOB
-otError NcpBase::SetPropertyHandler_THREAD_THREAD_STEERING_DATA(uint8_t aHeader, spinel_prop_key_t aKey,
+otError NcpBase::SetPropertyHandler_THREAD_STEERING_DATA(uint8_t aHeader, spinel_prop_key_t aKey,
                                                                 const uint8_t *aValuePtr, uint16_t aValueLen)
 {
     otExtAddress *extAddress;
@@ -5620,7 +5601,7 @@ otError NcpBase::SetPropertyHandler_CNTR_RESET(uint8_t aHeader, spinel_prop_key_
     error = OT_ERROR_NOT_IMPLEMENTED;
 
 exit:
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     // There is currently no getter for PROP_CNTR_RESET, so we just
     // return SPINEL_STATUS_OK for success when the counters are reset.
@@ -5657,7 +5638,7 @@ otError NcpBase::SetPropertyHandler_THREAD_COMMISSIONER_ENABLED(uint8_t aHeader,
     }
 
 exit:
-    (void)aKey;
+    OT_UNUSED_VARIABLE(aKey);
 
     return SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
 }
@@ -6012,11 +5993,11 @@ otError NcpBase::SetPropertyHandler_THREAD_MODE(uint8_t aHeader, spinel_prop_key
 
     VerifyOrExit(parsedLength > 0, error = OT_ERROR_PARSE);
 
-    modeConfig.mRxOnWhenIdle = ((numericMode & kThreadMode_RxOnWhenIdle) == kThreadMode_RxOnWhenIdle);
+    modeConfig.mRxOnWhenIdle = ((numericMode & SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE) == SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE);
     modeConfig.mSecureDataRequests =
-        ((numericMode & kThreadMode_SecureDataRequest) == kThreadMode_SecureDataRequest);
-    modeConfig.mDeviceType = ((numericMode & kThreadMode_FullFunctionDevice) == kThreadMode_FullFunctionDevice);
-    modeConfig.mNetworkData = ((numericMode & kThreadMode_FullNetworkData) == kThreadMode_FullNetworkData);
+        ((numericMode & SPINEL_THREAD_MODE_SECURE_DATA_REQUEST) == SPINEL_THREAD_MODE_SECURE_DATA_REQUEST);
+    modeConfig.mDeviceType = ((numericMode & SPINEL_THREAD_MODE_FULL_FUNCTION_DEV) == SPINEL_THREAD_MODE_FULL_FUNCTION_DEV);
+    modeConfig.mNetworkData = ((numericMode & SPINEL_THREAD_MODE_FULL_NETWORK_DATA) == SPINEL_THREAD_MODE_FULL_NETWORK_DATA);
 
     error = otThreadSetLinkMode(mInstance, modeConfig);
 
@@ -6661,7 +6642,7 @@ otError NcpBase::InsertPropertyHandler_THREAD_OFF_MESH_ROUTES(uint8_t aHeader, s
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
-
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otExternalRouteConfig routeConfig;
     otIp6Address *addrPtr;
     bool stable = false;
@@ -6669,10 +6650,7 @@ otError NcpBase::InsertPropertyHandler_THREAD_OFF_MESH_ROUTES(uint8_t aHeader, s
 
     memset(&routeConfig, 0, sizeof(otExternalRouteConfig));
 
-    VerifyOrExit(
-        mAllowLocalNetworkDataChange == true,
-        error = SendLastStatus(aHeader, SPINEL_STATUS_INVALID_STATE)
-    );
+    VerifyOrExit(mAllowLocalNetworkDataChange == true, spinelError = SPINEL_STATUS_INVALID_STATE);
 
     parsedLength = spinel_datatype_unpack(
                        aValuePtr,
@@ -6689,35 +6667,30 @@ otError NcpBase::InsertPropertyHandler_THREAD_OFF_MESH_ROUTES(uint8_t aHeader, s
                        &flags
                    );
 
-    if (parsedLength > 0)
-    {
-        routeConfig.mPrefix.mPrefix = *addrPtr;
-        routeConfig.mStable = stable;
-        routeConfig.mPreference = FlagByteToExternalRoutePreference(flags);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        error = otBorderRouterAddRoute(mInstance, &routeConfig);
+    routeConfig.mPrefix.mPrefix = *addrPtr;
+    routeConfig.mStable = stable;
+    routeConfig.mPreference = FlagByteToExternalRoutePreference(flags);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_INSERTED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
-    {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
-    }
+    error = otBorderRouterAddRoute(mInstance, &routeConfig);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_INSERTED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
 
 exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
+    {
+        error = SendLastStatus(aHeader, spinelError);
+    }
+
     return error;
 }
 
@@ -6726,7 +6699,7 @@ otError NcpBase::InsertPropertyHandler_THREAD_ON_MESH_NETS(uint8_t aHeader, spin
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
-
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otBorderRouterConfig borderRouterConfig;
     otIp6Address *addrPtr;
     bool stable = false;
@@ -6734,10 +6707,7 @@ otError NcpBase::InsertPropertyHandler_THREAD_ON_MESH_NETS(uint8_t aHeader, spin
 
     memset(&borderRouterConfig, 0, sizeof(otBorderRouterConfig));
 
-    VerifyOrExit(
-        mAllowLocalNetworkDataChange == true,
-        error = SendLastStatus(aHeader, SPINEL_STATUS_INVALID_STATE)
-    );
+    VerifyOrExit(mAllowLocalNetworkDataChange == true, spinelError = SPINEL_STATUS_INVALID_STATE);
 
     parsedLength = spinel_datatype_unpack(
                        aValuePtr,
@@ -6754,42 +6724,37 @@ otError NcpBase::InsertPropertyHandler_THREAD_ON_MESH_NETS(uint8_t aHeader, spin
                        &flags
                    );
 
-    if (parsedLength > 0)
-    {
-        borderRouterConfig.mPrefix.mPrefix = *addrPtr;
-        borderRouterConfig.mStable = stable;
-        borderRouterConfig.mPreference =
-            ((flags & SPINEL_NET_FLAG_PREFERENCE_MASK) >> SPINEL_NET_FLAG_PREFERENCE_OFFSET);
-        borderRouterConfig.mPreferred = ((flags & SPINEL_NET_FLAG_PREFERRED) != 0);
-        borderRouterConfig.mSlaac = ((flags & SPINEL_NET_FLAG_SLAAC) != 0);
-        borderRouterConfig.mDhcp = ((flags & SPINEL_NET_FLAG_DHCP) != 0);
-        borderRouterConfig.mConfigure = ((flags & SPINEL_NET_FLAG_CONFIGURE) != 0);
-        borderRouterConfig.mDefaultRoute = ((flags & SPINEL_NET_FLAG_DEFAULT_ROUTE) != 0);
-        borderRouterConfig.mOnMesh = ((flags & SPINEL_NET_FLAG_ON_MESH) != 0);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        error = otBorderRouterAddOnMeshPrefix(mInstance, &borderRouterConfig);
+    borderRouterConfig.mPrefix.mPrefix = *addrPtr;
+    borderRouterConfig.mStable = stable;
+    borderRouterConfig.mPreference =
+        ((flags & SPINEL_NET_FLAG_PREFERENCE_MASK) >> SPINEL_NET_FLAG_PREFERENCE_OFFSET);
+    borderRouterConfig.mPreferred = ((flags & SPINEL_NET_FLAG_PREFERRED) != 0);
+    borderRouterConfig.mSlaac = ((flags & SPINEL_NET_FLAG_SLAAC) != 0);
+    borderRouterConfig.mDhcp = ((flags & SPINEL_NET_FLAG_DHCP) != 0);
+    borderRouterConfig.mConfigure = ((flags & SPINEL_NET_FLAG_CONFIGURE) != 0);
+    borderRouterConfig.mDefaultRoute = ((flags & SPINEL_NET_FLAG_DEFAULT_ROUTE) != 0);
+    borderRouterConfig.mOnMesh = ((flags & SPINEL_NET_FLAG_ON_MESH) != 0);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_INSERTED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
-    {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
-    }
+    error = otBorderRouterAddOnMeshPrefix(mInstance, &borderRouterConfig);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_INSERTED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
 
 exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
+    {
+        error = SendLastStatus(aHeader, spinelError);
+    }
+
     return error;
 }
 #endif // OPENTHREAD_ENABLE_BORDER_ROUTER
@@ -6799,6 +6764,7 @@ otError NcpBase::InsertPropertyHandler_THREAD_ASSISTING_PORTS(uint8_t aHeader, s
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     uint16_t port;
 
     parsedLength = spinel_datatype_unpack(
@@ -6808,28 +6774,24 @@ otError NcpBase::InsertPropertyHandler_THREAD_ASSISTING_PORTS(uint8_t aHeader, s
                        &port
                    );
 
-    if (parsedLength > 0)
-    {
-        error = otIp6AddUnsecurePort(mInstance, port);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_INSERTED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
+    error = otIp6AddUnsecurePort(mInstance, port);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_INSERTED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -6840,8 +6802,9 @@ otError NcpBase::InsertPropertyHandler_THREAD_ASSISTING_PORTS(uint8_t aHeader, s
 otError NcpBase::InsertPropertyHandler_MAC_WHITELIST(uint8_t aHeader, spinel_prop_key_t aKey,
                                                      const uint8_t *aValuePtr, uint16_t aValueLen)
 {
-    otError error = OT_ERROR_NONE;
     spinel_ssize_t parsedLength;
+    otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otExtAddress *extAddress = NULL;
     int8_t rssi = RSSI_OVERRIDE_DISABLED;
 
@@ -6865,35 +6828,32 @@ otError NcpBase::InsertPropertyHandler_MAC_WHITELIST(uint8_t aHeader, spinel_pro
                        );
     }
 
-    if (parsedLength > 0)
-    {
-        if (rssi == RSSI_OVERRIDE_DISABLED)
-        {
-            error = otLinkAddWhitelist(mInstance, extAddress->m8);
-        }
-        else
-        {
-            error = otLinkAddWhitelistRssi(mInstance, extAddress->m8, rssi);
-        }
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_INSERTED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
+    if (rssi == RSSI_OVERRIDE_DISABLED)
+    {
+        error = otLinkAddWhitelist(mInstance, extAddress->m8);
     }
     else
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = otLinkAddWhitelistRssi(mInstance, extAddress->m8, rssi);
+    }
+
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_INSERTED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
+    {
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -6902,8 +6862,9 @@ otError NcpBase::InsertPropertyHandler_MAC_WHITELIST(uint8_t aHeader, spinel_pro
 otError NcpBase::InsertPropertyHandler_MAC_BLACKLIST(uint8_t aHeader, spinel_prop_key_t aKey,
                                                      const uint8_t *aValuePtr, uint16_t aValueLen)
 {
-    otError error = OT_ERROR_NONE;
     spinel_ssize_t parsedLength;
+    otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otExtAddress *extAddress = NULL;
 
     parsedLength = spinel_datatype_unpack(
@@ -6913,28 +6874,24 @@ otError NcpBase::InsertPropertyHandler_MAC_BLACKLIST(uint8_t aHeader, spinel_pro
                        &extAddress
                    );
 
-    if (parsedLength > 0)
-    {
-        error = otLinkAddBlacklist(mInstance, extAddress->m8);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_INSERTED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
+    error = otLinkAddBlacklist(mInstance, extAddress->m8);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_INSERTED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -6948,15 +6905,12 @@ otError NcpBase::InsertPropertyHandler_THREAD_JOINERS(uint8_t aHeader, spinel_pr
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
-
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otExtAddress *extAddress = NULL;
     const char *aPSKd = NULL;
     uint32_t joinerTimeout = 0;
 
-    VerifyOrExit(
-        mAllowLocalNetworkDataChange == true,
-        error = SendLastStatus(aHeader, SPINEL_STATUS_INVALID_STATE)
-    );
+    VerifyOrExit(mAllowLocalNetworkDataChange == true, spinelError =  SPINEL_STATUS_INVALID_STATE);
 
     parsedLength = spinel_datatype_unpack(
                        aValuePtr,
@@ -6986,31 +6940,26 @@ otError NcpBase::InsertPropertyHandler_THREAD_JOINERS(uint8_t aHeader, spinel_pr
         extAddress = NULL;
     }
 
-    if (parsedLength > 0)
-    {
-        error = otCommissionerAddJoiner(mInstance, extAddress, aPSKd, joinerTimeout);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_INSERTED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
-    {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
-    }
+    error = otCommissionerAddJoiner(mInstance, extAddress, aPSKd, joinerTimeout);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_INSERTED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
 
 exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
+    {
+        error = SendLastStatus(aHeader, spinelError);
+    }
+
     return error;
 }
 #endif // OPENTHREAD_ENABLE_COMMISSIONER && OPENTHREAD_FTD
@@ -7020,12 +6969,12 @@ exit:
 // ----------------------------------------------------------------------------
 
 #if OPENTHREAD_ENABLE_RAW_LINK_API
-
 otError NcpBase::RemovePropertyHandler_MAC_SRC_MATCH_SHORT_ADDRESSES(uint8_t aHeader, spinel_prop_key_t aKey,
                                                                      const uint8_t *aValuePtr, uint16_t aValueLen)
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     uint16_t shortAddress;
 
     parsedLength = spinel_datatype_unpack(
@@ -7035,28 +6984,24 @@ otError NcpBase::RemovePropertyHandler_MAC_SRC_MATCH_SHORT_ADDRESSES(uint8_t aHe
                        &shortAddress
                    );
 
-    if (parsedLength > 0)
-    {
-        error = otLinkRawSrcMatchClearShortEntry(mInstance, shortAddress);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_REMOVED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
+    error = otLinkRawSrcMatchClearShortEntry(mInstance, shortAddress);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -7067,6 +7012,7 @@ otError NcpBase::RemovePropertyHandler_MAC_SRC_MATCH_EXTENDED_ADDRESSES(uint8_t 
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     uint8_t *extAddress;
 
     parsedLength = spinel_datatype_unpack(
@@ -7076,40 +7022,36 @@ otError NcpBase::RemovePropertyHandler_MAC_SRC_MATCH_EXTENDED_ADDRESSES(uint8_t 
                        &extAddress
                    );
 
-    if (parsedLength > 0)
-    {
-        error = otLinkRawSrcMatchClearExtEntry(mInstance, extAddress);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_REMOVED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
+    error = otLinkRawSrcMatchClearExtEntry(mInstance, extAddress);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
 }
-
-#endif
+#endif // #if OPENTHREAD_ENABLE_RAW_LINK_API
 
 otError NcpBase::RemovePropertyHandler_IPV6_ADDRESS_TABLE(uint8_t aHeader, spinel_prop_key_t aKey,
                                                           const uint8_t *aValuePtr, uint16_t aValueLen)
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otIp6Address *addrPtr;
 
     parsedLength = spinel_datatype_unpack(
@@ -7119,28 +7061,24 @@ otError NcpBase::RemovePropertyHandler_IPV6_ADDRESS_TABLE(uint8_t aHeader, spine
                        &addrPtr
                    );
 
-    if (parsedLength > 0)
-    {
-        error = otIp6RemoveUnicastAddress(mInstance, addrPtr);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_REMOVED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
+    error = otIp6RemoveUnicastAddress(mInstance, addrPtr);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -7152,15 +7090,13 @@ otError NcpBase::RemovePropertyHandler_THREAD_OFF_MESH_ROUTES(uint8_t aHeader, s
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otIp6Prefix ip6Prefix;
     otIp6Address *addrPtr;
 
     memset(&ip6Prefix, 0, sizeof(otIp6Prefix));
 
-    VerifyOrExit(
-        mAllowLocalNetworkDataChange == true,
-        error = SendLastStatus(aHeader, SPINEL_STATUS_INVALID_STATE)
-    );
+    VerifyOrExit(mAllowLocalNetworkDataChange == true, spinelError = SPINEL_STATUS_INVALID_STATE);
 
     parsedLength = spinel_datatype_unpack(
                        aValuePtr,
@@ -7173,32 +7109,28 @@ otError NcpBase::RemovePropertyHandler_THREAD_OFF_MESH_ROUTES(uint8_t aHeader, s
                        &ip6Prefix.mLength
                    );
 
-    if (parsedLength > 0)
-    {
-        ip6Prefix.mPrefix = *addrPtr;
-        error = otBorderRouterRemoveRoute(mInstance, &ip6Prefix);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_REMOVED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
-    {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
-    }
+    ip6Prefix.mPrefix = *addrPtr;
+
+    error = otBorderRouterRemoveRoute(mInstance, &ip6Prefix);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
 
 exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
+    {
+        error = SendLastStatus(aHeader, spinelError);
+    }
+
     return error;
 }
 
@@ -7207,15 +7139,13 @@ otError NcpBase::RemovePropertyHandler_THREAD_ON_MESH_NETS(uint8_t aHeader, spin
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otIp6Prefix ip6Prefix;
     otIp6Address *addrPtr;
 
     memset(&ip6Prefix, 0, sizeof(otIp6Prefix));
 
-    VerifyOrExit(
-        mAllowLocalNetworkDataChange == true,
-        error = SendLastStatus(aHeader, SPINEL_STATUS_INVALID_STATE)
-    );
+    VerifyOrExit(mAllowLocalNetworkDataChange == true, spinelError = SPINEL_STATUS_INVALID_STATE);
 
     parsedLength = spinel_datatype_unpack(
                        aValuePtr,
@@ -7228,32 +7158,29 @@ otError NcpBase::RemovePropertyHandler_THREAD_ON_MESH_NETS(uint8_t aHeader, spin
                        &ip6Prefix.mLength
                    );
 
-    if (parsedLength > 0)
-    {
-        ip6Prefix.mPrefix = *addrPtr;
-        error = otBorderRouterRemoveOnMeshPrefix(mInstance, &ip6Prefix);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_REMOVED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
-    {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
-    }
+    ip6Prefix.mPrefix = *addrPtr;
+
+    error = otBorderRouterRemoveOnMeshPrefix(mInstance, &ip6Prefix);
+
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
 
 exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
+    {
+        error = SendLastStatus(aHeader, spinelError);
+    }
+
     return error;
 }
 #endif
@@ -7263,6 +7190,7 @@ otError NcpBase::RemovePropertyHandler_THREAD_ASSISTING_PORTS(uint8_t aHeader, s
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     uint16_t port;
 
     parsedLength = spinel_datatype_unpack(
@@ -7272,28 +7200,24 @@ otError NcpBase::RemovePropertyHandler_THREAD_ASSISTING_PORTS(uint8_t aHeader, s
                        &port
                    );
 
-    if (parsedLength > 0)
-    {
-        error = otIp6RemoveUnsecurePort(mInstance, port);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_REMOVED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
+    error = otIp6RemoveUnsecurePort(mInstance, port);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -7305,6 +7229,7 @@ otError NcpBase::RemovePropertyHandler_THREAD_ACTIVE_ROUTER_IDS(uint8_t aHeader,
 {
     spinel_ssize_t parsedLength;
     otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     uint8_t routerId;
 
     parsedLength = spinel_datatype_unpack(
@@ -7314,28 +7239,24 @@ otError NcpBase::RemovePropertyHandler_THREAD_ACTIVE_ROUTER_IDS(uint8_t aHeader,
                        &routerId
                    );
 
-    if (parsedLength > 0)
-    {
-        error = otThreadReleaseRouterId(mInstance, routerId);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        if (error == OT_ERROR_NONE)
-        {
-            error = SendPropertyUpdate(
-                        aHeader,
-                        SPINEL_CMD_PROP_VALUE_REMOVED,
-                        aKey,
-                        aValuePtr,
-                        aValueLen
-                    );
-        }
-        else
-        {
-            error = SendLastStatus(aHeader, ThreadErrorToSpinelStatus(error));
-        }
-    }
-    else
+    error = otThreadReleaseRouterId(mInstance, routerId);
+    VerifyOrExit(error == OT_ERROR_NONE, spinelError = ThreadErrorToSpinelStatus(error));
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -7347,8 +7268,9 @@ otError NcpBase::RemovePropertyHandler_THREAD_ACTIVE_ROUTER_IDS(uint8_t aHeader,
 otError NcpBase::RemovePropertyHandler_MAC_WHITELIST(uint8_t aHeader, spinel_prop_key_t aKey,
                                                      const uint8_t *aValuePtr, uint16_t aValueLen)
 {
-    otError error = OT_ERROR_NONE;
     spinel_ssize_t parsedLength;
+    otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otExtAddress *extAddress = NULL;
 
     parsedLength = spinel_datatype_unpack(
@@ -7358,21 +7280,23 @@ otError NcpBase::RemovePropertyHandler_MAC_WHITELIST(uint8_t aHeader, spinel_pro
                        &extAddress
                    );
 
-    if (parsedLength > 0)
-    {
-        otLinkRemoveWhitelist(mInstance, extAddress->m8);
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
 
-        error = SendPropertyUpdate(
-                    aHeader,
-                    SPINEL_CMD_PROP_VALUE_REMOVED,
-                    aKey,
-                    aValuePtr,
-                    aValueLen
-                );
-    }
-    else
+    otLinkRemoveWhitelist(mInstance, extAddress->m8);
+
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -7381,8 +7305,9 @@ otError NcpBase::RemovePropertyHandler_MAC_WHITELIST(uint8_t aHeader, spinel_pro
 otError NcpBase::RemovePropertyHandler_MAC_BLACKLIST(uint8_t aHeader, spinel_prop_key_t aKey,
                                                      const uint8_t *aValuePtr, uint16_t aValueLen)
 {
-    otError error = OT_ERROR_NONE;
     spinel_ssize_t parsedLength;
+    otError error = OT_ERROR_NONE;
+    spinel_status_t spinelError = SPINEL_STATUS_OK;
     otExtAddress *extAddress = NULL;
 
     parsedLength = spinel_datatype_unpack(
@@ -7392,21 +7317,23 @@ otError NcpBase::RemovePropertyHandler_MAC_BLACKLIST(uint8_t aHeader, spinel_pro
                        &extAddress
                    );
 
-    if (parsedLength > 0)
-    {
+    VerifyOrExit(parsedLength > 0, spinelError = SPINEL_STATUS_PARSE_ERROR);
+
         otLinkRemoveBlacklist(mInstance, extAddress->m8);
 
-        error = SendPropertyUpdate(
-                    aHeader,
-                    SPINEL_CMD_PROP_VALUE_REMOVED,
-                    aKey,
-                    aValuePtr,
-                    aValueLen
-                );
-    }
-    else
+    error = SendPropertyUpdate(
+                aHeader,
+                SPINEL_CMD_PROP_VALUE_REMOVED,
+                aKey,
+                aValuePtr,
+                aValueLen
+            );
+
+exit:
+
+    if (spinelError != SPINEL_STATUS_OK)
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_PARSE_ERROR);
+        error = SendLastStatus(aHeader, spinelError);
     }
 
     return error;
@@ -7502,21 +7429,17 @@ otError NcpBase::StreamWrite(int aStreamId, const uint8_t *aDataPtr, int aDataLe
         aStreamId = SPINEL_PROP_STREAM_DEBUG;
     }
 
-    if (!mDisableStreamWrite)
-    {
-        error = SendPropertyUpdate(
-                    SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0,
-                    SPINEL_CMD_PROP_VALUE_IS,
-                    static_cast<spinel_prop_key_t>(aStreamId),
-                    aDataPtr,
-                    static_cast<uint16_t>(aDataLen)
-                );
-    }
-    else
-    {
-        error = OT_ERROR_INVALID_STATE;
-    }
+    VerifyOrExit(!mDisableStreamWrite, error = OT_ERROR_INVALID_STATE);
 
+    error = SendPropertyUpdate(
+                SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0,
+                SPINEL_CMD_PROP_VALUE_IS,
+                static_cast<spinel_prop_key_t>(aStreamId),
+                aDataPtr,
+                static_cast<uint16_t>(aDataLen)
+            );
+
+exit:
     return error;
 }
 
@@ -7567,8 +7490,8 @@ otError otNcpRegisterPeekPokeDelagates(otNcpDelegateAllowPeekPoke aAllowPeekDele
         ncp->RegisterPeekPokeDelagates(aAllowPeekDelegate, aAllowPokeDelegate);
     }
 #else
-    (void)aAllowPeekDelegate;
-    (void)aAllowPokeDelegate;
+    OT_UNUSED_VARIABLE(aAllowPeekDelegate);
+    OT_UNUSED_VARIABLE(aAllowPokeDelegate);
 
     error = OT_ERROR_DISABLED_FEATURE;
 
@@ -7592,7 +7515,7 @@ void otNcpRegisterLegacyHandlers(const otNcpLegacyHandlers *aHandlers)
     }
 
 #else
-    (void)aHandlers;
+    OT_UNUSED_VARIABLE(aHandlers);
 #endif
 }
 
@@ -7607,7 +7530,7 @@ void otNcpHandleDidReceiveNewLegacyUlaPrefix(const uint8_t *aUlaPrefix)
     }
 
 #else
-    (void)aUlaPrefix;
+    OT_UNUSED_VARIABLE(aUlaPrefix);
 #endif
 }
 
@@ -7622,6 +7545,6 @@ void otNcpHandleLegacyNodeDidJoin(const otExtAddress *aExtAddr)
     }
 
 #else
-    (void)aExtAddr;
+    OT_UNUSED_VARIABLE(aExtAddr);
 #endif
 }

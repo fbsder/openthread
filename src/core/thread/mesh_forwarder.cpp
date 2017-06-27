@@ -333,7 +333,12 @@ void MeshForwarder::ScheduleTransmissionTask(void)
     }
 
 exit:
-    (void) error;
+
+    if (error != OT_ERROR_NONE)
+    {
+        otLogWarnMac(GetInstance(), "Error while scheduling transmission task: %s",
+                     otThreadErrorToString(error));
+    }
 }
 
 otError MeshForwarder::SendMessage(Message &aMessage)
@@ -1486,13 +1491,12 @@ void MeshForwarder::HandleSentFrame(Mac::Frame &aFrame, otError aError)
 
         if (mSendMessage == child->GetIndirectMessage())
         {
-            switch (aError)
+            if (aError == OT_ERROR_NONE)
             {
-            case OT_ERROR_NONE:
                 child->ResetIndirectTxAttempts();
-                break;
-
-            default:
+            }
+            else
+            {
                 child->IncrementIndirectTxAttempts();
 
                 if (child->GetIndirectTxAttempts() < kMaxPollTriggeredTxAttempts)
@@ -1521,13 +1525,13 @@ void MeshForwarder::HandleSentFrame(Mac::Frame &aFrame, otError aError)
 
                 child->ResetIndirectTxAttempts();
 
+#if OPENTHREAD_CONFIG_DROP_MESSAGE_ON_FRAGMENT_TX_FAILURE
                 // We set the NextOffset to end of message, since there is no need to
                 // send any remaining fragments in the message to the child, if all tx
                 // attempts of current frame already failed.
 
                 mMessageNextOffset = mSendMessage->GetLength();
-
-                break;
+#endif
             }
         }
 
@@ -1576,6 +1580,19 @@ void MeshForwarder::HandleSentFrame(Mac::Frame &aFrame, otError aError)
 
     if (mSendMessage->GetDirectTransmission())
     {
+
+#if OPENTHREAD_CONFIG_DROP_MESSAGE_ON_FRAGMENT_TX_FAILURE
+
+        if (aError != OT_ERROR_NONE)
+        {
+            // We set the NextOffset to end of message to avoid sending
+            // any remaining fragments in the message.
+
+            mMessageNextOffset = mSendMessage->GetLength();
+        }
+
+#endif
+
         if (mMessageNextOffset < mSendMessage->GetLength())
         {
             mSendMessage->SetOffset(mMessageNextOffset);
@@ -1766,7 +1783,7 @@ exit:
         otLogInfoMac(GetInstance(), "Dropping rx frame, error:%s, %s", otThreadErrorToString(error),
                      aFrame.ToInfoString(stringBuffer, sizeof(stringBuffer)));
 
-        (void)stringBuffer;
+        OT_UNUSED_VARIABLE(stringBuffer);
     }
 }
 
@@ -1842,7 +1859,7 @@ exit:
             aMessageInfo.mLinkSecurity ? "yes" : "no"
         );
 
-        (void)srcStringBuffer;
+        OT_UNUSED_VARIABLE(srcStringBuffer);
 
         if (message != NULL)
         {
@@ -1997,8 +2014,8 @@ exit:
         char srcStringBuffer[Mac::Address::kAddressStringSize];
         char dstStringBuffer[Mac::Address::kAddressStringSize];
 
-        (void)srcStringBuffer;
-        (void)dstStringBuffer;
+        OT_UNUSED_VARIABLE(srcStringBuffer);
+        OT_UNUSED_VARIABLE(dstStringBuffer);
 
         otLogInfoMac(
             GetInstance(),
@@ -2109,8 +2126,8 @@ exit:
         char srcStringBuffer[Mac::Address::kAddressStringSize];
         char dstStringBuffer[Mac::Address::kAddressStringSize];
 
-        (void)srcStringBuffer;
-        (void)dstStringBuffer;
+        OT_UNUSED_VARIABLE(srcStringBuffer);
+        OT_UNUSED_VARIABLE(dstStringBuffer);
 
         otLogInfoMac(
             GetInstance(),

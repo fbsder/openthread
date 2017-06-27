@@ -590,7 +590,8 @@ otError Mle::SetStateChild(uint16_t aRloc16)
 
     if ((mDeviceMode & ModeTlv::kModeRxOnWhenIdle) != 0)
     {
-        mParentRequestTimer.Start(Timer::SecToMsec(mTimeout) - kUnicastRetransmissionDelay * kMaxChildKeepAliveAttempts);
+        mParentRequestTimer.Start(Timer::SecToMsec(mTimeout) -
+                                  static_cast<uint32_t>(kUnicastRetransmissionDelay) * kMaxChildKeepAliveAttempts);
     }
 
     if ((mDeviceMode & ModeTlv::kModeFFD) != 0)
@@ -2488,7 +2489,7 @@ otError Mle::HandleLeaderData(const Message &aMessage, const Ip6::MessageInfo &a
 
 exit:
 
-    (void)aMessageInfo;
+    OT_UNUSED_VARIABLE(aMessageInfo);
 
     if (dataRequest)
     {
@@ -2813,7 +2814,7 @@ exit:
         otLogWarnMleErr(GetInstance(), error, "Failed to process Child ID Response");
     }
 
-    (void)aMessageInfo;
+    OT_UNUSED_VARIABLE(aMessageInfo);
     return error;
 }
 
@@ -2979,7 +2980,8 @@ otError Mle::HandleChildUpdateResponse(const Message &aMessage, const Ip6::Messa
         }
         else
         {
-            mParentRequestTimer.Start(Timer::SecToMsec(mTimeout) - kUnicastRetransmissionDelay * kMaxChildKeepAliveAttempts);
+            mParentRequestTimer.Start(Timer::SecToMsec(mTimeout) -
+                                      static_cast<uint32_t>(kUnicastRetransmissionDelay) * kMaxChildKeepAliveAttempts);
             mNetif.GetMeshForwarder().SetRxOnWhenIdle(true);
         }
 
@@ -3038,7 +3040,7 @@ otError Mle::HandleAnnounce(const Message &aMessage, const Ip6::MessageInfo &aMe
     }
 
 exit:
-    (void)aMessageInfo;
+    OT_UNUSED_VARIABLE(aMessageInfo);
     return error;
 }
 
@@ -3214,7 +3216,7 @@ Neighbor *Mle::GetNeighbor(const Mac::Address &aAddress)
 
 uint16_t Mle::GetNextHop(uint16_t aDestination) const
 {
-    (void)aDestination;
+    OT_UNUSED_VARIABLE(aDestination);
     return (mParent.GetState() == Neighbor::kStateValid) ? mParent.GetRloc16() : static_cast<uint16_t>
            (Mac::kShortAddrInvalid);
 }

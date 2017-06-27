@@ -96,7 +96,7 @@ void Mac::StartCsmaBackoff(void)
         }
 
         backoff = (otPlatRandomGet() % (1UL << backoffExponent));
-        backoff *= (kUnitBackoffPeriod * OT_RADIO_SYMBOL_TIME);
+        backoff *= (static_cast<uint32_t>(kUnitBackoffPeriod) * OT_RADIO_SYMBOL_TIME);
 
 #if OPENTHREAD_CONFIG_ENABLE_PLATFORM_USEC_BACKOFF_TIMER
         otPlatUsecAlarmTime now;
@@ -286,7 +286,7 @@ otError Mac::ConvertBeaconToActiveScanResult(Frame *aBeaconFrame, otActiveScanRe
 
     otLogInfoMac(GetInstance(), "Received Beacon, %s", beaconPayload->ToInfoString(stringBuffer, sizeof(stringBuffer)));
 
-    (void)stringBuffer;
+    OT_UNUSED_VARIABLE(stringBuffer);
 
 exit:
     return error;
@@ -684,7 +684,7 @@ void Mac::SendBeacon(Frame &aFrame)
 
     otLogInfoMac(GetInstance(), "Sending Beacon, %s", beaconPayload->ToInfoString(stringBuffer, sizeof(stringBuffer)));
 
-    (void)stringBuffer;
+    OT_UNUSED_VARIABLE(stringBuffer);
 }
 
 void Mac::ProcessTransmitSecurity(Frame &aFrame)
@@ -1169,7 +1169,7 @@ void Mac::SentFrame(otError aError)
             ExitNow();
         }
 
-        (void)stringBuffer;
+        OT_UNUSED_VARIABLE(stringBuffer);
         break;
     }
 
@@ -1409,7 +1409,6 @@ void Mac::ReceiveDoneTask(Frame *aFrame, otError aError)
     PanId panid;
     Neighbor *neighbor;
     otMacWhitelistEntry *whitelistEntry;
-    otMacBlacklistEntry *blacklistEntry;
     int8_t rssi;
     bool receive = false;
     uint8_t commandId;
@@ -1479,7 +1478,7 @@ void Mac::ReceiveDoneTask(Frame *aFrame, otError aError)
     // Source Blacklist Processing
     if (srcaddr.mLength != 0 && mBlacklist.IsEnabled())
     {
-        VerifyOrExit((blacklistEntry = mBlacklist.Find(srcaddr.mExtAddress)) == NULL, error = OT_ERROR_BLACKLIST_FILTERED);
+        VerifyOrExit((mBlacklist.Find(srcaddr.mExtAddress)) == NULL, error = OT_ERROR_BLACKLIST_FILTERED);
     }
 
     // Destination Address Filtering
@@ -1623,7 +1622,7 @@ exit:
             otLogInfoMac(GetInstance(), "Frame rx failed, error:%s, %s", otThreadErrorToString(error),
                          aFrame->ToInfoString(stringBuffer, sizeof(stringBuffer)));
 
-            (void)stringBuffer;
+            OT_UNUSED_VARIABLE(stringBuffer);
         }
 
         switch (error)

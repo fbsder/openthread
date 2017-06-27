@@ -370,7 +370,7 @@ int Dtls::HandleMbedtlsExportKeys(const unsigned char *aMasterSecret, const unsi
 
     otLogInfoMeshCoP(GetInstance(), "Generated KEK");
 
-    (void)aMasterSecret;
+    OT_UNUSED_VARIABLE(aMasterSecret);
     return 0;
 }
 
@@ -491,7 +491,7 @@ otError Dtls::MapError(int rval)
 void Dtls::HandleMbedtlsDebug(void *ctx, int level, const char *, int, const char *str)
 {
     Dtls *pThis = static_cast<Dtls *>(ctx);
-    (void)pThis;
+    OT_UNUSED_VARIABLE(pThis);
 
     switch (level)
     {
