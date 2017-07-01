@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2017, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,53 +28,47 @@
 
 /**
  * @file
- *   This file includes the platform-specific initializers.
- *
+ *   This file implements the locator class for OpenThread objects.
  */
 
-#include <openthread/platform/logging.h>
-
-#include <drivers/clock/nrf_drv_clock.h>
-#include "platform-nrf5.h"
+#define WPP_NAME "locator.tmh"
 
 #include <openthread/config.h>
 
-void __cxa_pure_virtual(void) { while (1); }
+#include "locator.hpp"
 
-void PlatformInit(int argc, char *argv[])
+#include "openthread-instance.h"
+#include "net/ip6.hpp"
+
+namespace ot {
+
+#if OPENTHREAD_ENABLE_MULTIPLE_INSTANCES
+
+otInstance *ThreadNetifLocator::GetInstance(void) const
 {
-    (void)argc;
-    (void)argv;
-
-    nrf_drv_clock_init();
-
-#if (OPENTHREAD_CONFIG_ENABLE_DEFAULT_LOG_OUTPUT == 0)
-    nrf5LogInit();
-#endif
-    nrf5AlarmInit();
-    nrf5RandomInit();
-    nrf5UartInit();
-    nrf5MiscInit();
-    nrf5CryptoInit();
-    nrf5RadioInit();
+    return otInstanceFromThreadNetif(&GetNetif());
 }
 
-void PlatformDeinit(void)
+otInstance *MeshForwarderLocator::GetInstance(void) const
 {
-    nrf5RadioDeinit();
-    nrf5CryptoDeinit();
-    nrf5MiscDeinit();
-    nrf5UartDeinit();
-    nrf5RandomDeinit();
-    nrf5AlarmDeinit();
-#if (OPENTHREAD_CONFIG_ENABLE_DEFAULT_LOG_OUTPUT == 0)
-    nrf5LogDeinit();
-#endif
+    return otInstanceFromThreadNetif(&GetMeshForwarder().GetNetif());
 }
 
-void PlatformProcessDrivers(otInstance *aInstance)
+otInstance *TimerSchedulerLocator::GetInstance(void) const
 {
-    nrf5AlarmProcess(aInstance);
-    nrf5RadioProcess(aInstance);
-    nrf5UartProcess();
+    return otInstanceFromIp6(Ip6::Ip6FromTimerScheduler(&GetTimerScheduler()));
 }
+
+otInstance *TaskletSchedulerLocator::GetInstance(void) const
+{
+    return otInstanceFromIp6(Ip6::Ip6FromTaskletScheduler(&GetTaskletScheduler()));
+}
+
+otInstance *Ip6Locator::GetInstance(void) const
+{
+    return otInstanceFromIp6(&GetIp6());
+}
+
+#endif // #if OPENTHREAD_ENABLE_MULTIPLE_INSTANCES
+
+}  // namespace ot

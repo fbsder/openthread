@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2017, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,53 +28,75 @@
 
 /**
  * @file
- *   This file includes the platform-specific initializers.
+ *   This file includes definitions for maintaining a pointer to arbitrary context information.
+ */
+
+#ifndef CONTEXT_HPP_
+#define CONTEXT_HPP_
+
+#include <openthread/config.h>
+#include <openthread/platform/toolchain.h>
+
+#include "openthread-core-config.h"
+
+namespace ot {
+
+/**
+ * @addtogroup core-context
+ *
+ * @brief
+ *   This module includes definitions for maintaining a pointer to arbitrary context information.
+ *
+ * @{
  *
  */
 
-#include <openthread/platform/logging.h>
-
-#include <drivers/clock/nrf_drv_clock.h>
-#include "platform-nrf5.h"
-
-#include <openthread/config.h>
-
-void __cxa_pure_virtual(void) { while (1); }
-
-void PlatformInit(int argc, char *argv[])
+/**
+ * This class implements definitions for maintaining a pointer to arbitrary context information.
+ *
+ * This is used as base class for objects that provide a callback or handler (e.g., Timer or Tasklet).
+ *
+ */
+class Context
 {
-    (void)argc;
-    (void)argv;
+public:
 
-    nrf_drv_clock_init();
-
-#if (OPENTHREAD_CONFIG_ENABLE_DEFAULT_LOG_OUTPUT == 0)
-    nrf5LogInit();
+#if OPENTHREAD_ENABLE_MULTIPLE_INSTANCES
+    /**
+     * This method returns the pointer to the arbitrary context information.
+     *
+     * @returns The pointer to the context information.
+     *
+     */
+    void *GetContext(void) const { return mContext; }
 #endif
-    nrf5AlarmInit();
-    nrf5RandomInit();
-    nrf5UartInit();
-    nrf5MiscInit();
-    nrf5CryptoInit();
-    nrf5RadioInit();
-}
 
-void PlatformDeinit(void)
-{
-    nrf5RadioDeinit();
-    nrf5CryptoDeinit();
-    nrf5MiscDeinit();
-    nrf5UartDeinit();
-    nrf5RandomDeinit();
-    nrf5AlarmDeinit();
-#if (OPENTHREAD_CONFIG_ENABLE_DEFAULT_LOG_OUTPUT == 0)
-    nrf5LogDeinit();
+protected:
+    /**
+     * This constructor initializes the context object.
+     *
+     * @param[in]  aContext    A pointer to arbitrary context information.
+     *
+     */
+    Context(void *aContext)
+#if OPENTHREAD_ENABLE_MULTIPLE_INSTANCES
+        : mContext(aContext)
 #endif
-}
+    {
+        OT_UNUSED_VARIABLE(aContext);
+    }
 
-void PlatformProcessDrivers(otInstance *aInstance)
-{
-    nrf5AlarmProcess(aInstance);
-    nrf5RadioProcess(aInstance);
-    nrf5UartProcess();
-}
+private:
+#if OPENTHREAD_ENABLE_MULTIPLE_INSTANCES
+    void *mContext;
+#endif
+};
+
+/**
+ * @}
+ *
+ */
+
+}  // namespace ot
+
+#endif  // CONTEXT_HPP_
