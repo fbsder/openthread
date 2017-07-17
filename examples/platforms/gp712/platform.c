@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2016-2017, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,46 +28,66 @@
 
 /**
  * @file
- *   This file includes definitions for IEEE 802.15.4 frame filtering based on MAC address.
+ * @brief
+ *   This file includes the platform-specific initializers.
  */
 
-#ifndef MAC_BLACKLIST_HPP_
-#define MAC_BLACKLIST_HPP_
+#include "platform_qorvo.h"
 
-#include "utils/wrap_stdint.h"
+#include "stdio.h"
+#include "stdlib.h"
 
-#include <openthread/types.h>
+#include <openthread/tasklet.h>
+#include <openthread/platform/uart.h>
 
-#include "mac/mac_frame.hpp"
+#include "radio_qorvo.h"
+#include "random_qorvo.h"
+#include "uart_qorvo.h"
 
-namespace ot {
-namespace Mac {
+void platformUartInit(void);
+void platformUartProcess(void);
 
-class Blacklist
+otInstance *localInstance = NULL;
+
+int     gArgumentsCount = 0;
+char  **gArguments = NULL;
+
+bool qorvoPlatGotoSleepCheck(void)
 {
-public:
-    typedef otMacBlacklistEntry Entry;
+    bool canGotoSleep = false;
 
-    Blacklist(void) { }
+    if (localInstance)
+    {
+        canGotoSleep = !otTaskletsArePending(localInstance);
+    }
 
-    bool IsEnabled(void) const { return false; }
+    return canGotoSleep;
+}
 
-    void SetEnabled(bool) { }
+void PlatformInit(int argc, char *argv[])
+{
+    gArgumentsCount = argc;
+    gArguments      = argv;
 
-    int GetMaxEntries(void) const { return 0; }
+    qorvoPlatInit((qorvoPlatGotoSleepCheckCallback_t)qorvoPlatGotoSleepCheck);
+    platformUartInit();
+    //qorvoAlarmInit();
+    qorvoRandomInit();
+    qorvoRadioInit();
 
-    otError GetEntry(uint8_t, Entry &) const { return OT_ERROR_NOT_IMPLEMENTED; }
+}
 
-    Entry *Add(const ExtAddress &) { return NULL; }
+void PlatformProcessDrivers(otInstance *aInstance)
+{
+    if (localInstance == NULL)
+    {
+        // local copy in case we need to perform a callback.
+        localInstance = aInstance;
+    }
 
-    void Remove(const ExtAddress &) { }
+    qorvoPlatMainLoop(!otTaskletsArePending(aInstance));
+    platformUartProcess();
+    //qorvoRadioProcess();
+    //qorvoAlarmProcess();
 
-    void Clear(void) { }
-
-    Entry *Find(const ExtAddress &) { return NULL; }
-};
-
-}  // namespace Mac
-}  // namespace ot
-
-#endif  // MAC_BLACKLIST_HPP_
+}

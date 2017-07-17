@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2016-2017, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,48 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread/config.h>
+#include "platform_qorvo.h"
 
-#if OPENTHREAD_ENABLE_MAC_WHITELIST
-#include "mac_whitelist_impl.hpp"
-#else
-#include "mac_whitelist_stub.hpp"
-#endif
+#include <unistd.h>
+#include <stdio.h>
+
+#include <openthread/types.h>
+#include <openthread/platform/misc.h>
+#include "radio_qorvo.h"
+#include <stdlib.h>
+
+extern int      gArgumentsCount;
+extern char   **gArguments;
+
+extern void platformUartRestore(void);
+
+void otPlatReset(otInstance *aInstance)
+{
+    char *argv[gArgumentsCount + 1];
+
+    for (int i = 0; i < gArgumentsCount; ++i)
+    {
+        argv[i] = gArguments[i];
+    }
+
+    argv[gArgumentsCount] = NULL;
+
+    qorvoRadioReset();
+    platformUartRestore();
+
+    execvp(argv[0], argv);
+    perror("reset failed");
+    exit(EXIT_FAILURE);
+    (void)aInstance;
+}
+
+otPlatResetReason otPlatGetResetReason(otInstance *aInstance)
+{
+    (void)aInstance;
+    return OT_PLAT_RESET_REASON_POWER_ON;
+}
+
+void otPlatWakeHost(void)
+{
+    // TODO: implement an operation to wake the host from sleep state.
+}
