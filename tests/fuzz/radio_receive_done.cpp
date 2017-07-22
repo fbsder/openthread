@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2017, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,62 +26,48 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @file
- *   This file implements the OpenThread Crypto API.
- */
+#include <stdlib.h>
+#include <string.h>
 
-#include <openthread/config.h>
-#include <openthread/crypto.h>
+#include <openthread/openthread.h>
+#include <openthread/platform/radio.h>
 
 #include "common/code_utils.hpp"
-#include "common/debug.hpp"
-#include "crypto/aes_ccm.hpp"
-#include "crypto/hmac_sha256.hpp"
 
-using namespace ot::Crypto;
+static otInstance *sInstance;
 
-void otCryptoHmacSha256(
-    const uint8_t *aKey, uint16_t aKeyLength,
-    const uint8_t *aBuf, uint16_t aBufLength,
-    uint8_t *aHash)
+extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
-    HmacSha256 hmac;
+    (void)argc;
+    (void)argv;
 
-    assert((aKey != NULL) && (aBuf != NULL) && (aHash != NULL));
+    sInstance = otInstanceInitSingle();
+    otLinkSetPanId(sInstance, (otPanId)0xdead);
+    otIp6SetEnabled(sInstance, true);
 
-    hmac.Start(aKey, aKeyLength);
-    hmac.Update(aBuf, aBufLength);
-    hmac.Finish(aHash);
+    return 0;
 }
 
-void otCryptoAesCcm(
-    const uint8_t *aKey, uint16_t aKeyLength,
-    uint8_t aTagLength,
-    const void *aNonce, uint8_t aNonceLength,
-    const void *aHeader, uint32_t aHeaderLength,
-    void *aPlainText, void *aCipherText, uint32_t aLength, bool aEncrypt,
-    void *aTag)
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-    AesCcm aesCcm;
-    uint8_t tagLength;
+    otRadioFrame frame;
+    uint8_t *buf;
 
-    assert((aKey != NULL) && (aNonce != NULL) && (aPlainText != NULL) && (aCipherText != NULL) && (aTag != NULL));
+    VerifyOrExit(size <= OT_RADIO_FRAME_MAX_SIZE);
 
-    SuccessOrExit(aesCcm.SetKey(aKey, aKeyLength));
-    SuccessOrExit(aesCcm.Init(aHeaderLength, aLength, aTagLength, aNonce, aNonceLength));
+    buf = static_cast<uint8_t *>(malloc(size));
 
-    if (aHeaderLength != 0)
-    {
-        assert(aHeader != NULL);
-        aesCcm.Header(aHeader, aHeaderLength);
-    }
+    memset(&frame, 0, sizeof(frame));
+    frame.mPsdu = buf;
+    frame.mChannel = 11;
+    frame.mLength = static_cast<uint8_t>(size);
 
-    aesCcm.Payload(aPlainText, aCipherText, aLength, aEncrypt);
-    aesCcm.Finalize(aTag, &tagLength);
+    memcpy(buf, data, frame.mLength);
 
-    assert(aTagLength == tagLength);
+    otPlatRadioReceiveDone(sInstance, &frame, OT_ERROR_NONE);
+
+    free(buf);
 
 exit:
-    return;
+    return 0;
 }

@@ -137,7 +137,6 @@ Mle::Mle(ThreadNetif &aThreadNetif) :
     mMeshLocal64.mValid = true;
     mMeshLocal64.mScopeOverride = Ip6::Address::kRealmLocalScope;
     mMeshLocal64.mScopeOverrideValid = true;
-    SetMeshLocalPrefix(meshLocalPrefix); // Also calls AddUnicastAddress
 
     // mesh-local 16
     mMeshLocal16.GetAddress().mFields.m16[4] = HostSwap16(0x0000);
@@ -157,13 +156,16 @@ Mle::Mle(ThreadNetif &aThreadNetif) :
     mLinkLocalAllThreadNodes.GetAddress().mFields.m16[0] = HostSwap16(0xff32);
     mLinkLocalAllThreadNodes.GetAddress().mFields.m16[6] = HostSwap16(0x0000);
     mLinkLocalAllThreadNodes.GetAddress().mFields.m16[7] = HostSwap16(0x0001);
-    aThreadNetif.SubscribeMulticast(mLinkLocalAllThreadNodes);
 
     // realm-local all thread nodes
     mRealmLocalAllThreadNodes.GetAddress().mFields.m16[0] = HostSwap16(0xff33);
     mRealmLocalAllThreadNodes.GetAddress().mFields.m16[6] = HostSwap16(0x0000);
     mRealmLocalAllThreadNodes.GetAddress().mFields.m16[7] = HostSwap16(0x0001);
-    aThreadNetif.SubscribeMulticast(mRealmLocalAllThreadNodes);
+
+    SetMeshLocalPrefix(meshLocalPrefix);
+
+    // `SetMeshLocalPrefix()` also adds the Mesh-Local EID and subscribes
+    // to the Link- and Realm-Local All Thread Nodes multicast addresses.
 
     mNetifCallback.Set(&Mle::HandleNetifStateChanged, this);
     aThreadNetif.RegisterCallback(mNetifCallback);
@@ -719,9 +721,11 @@ otError Mle::SetMeshLocalPrefix(const uint8_t *aMeshLocalPrefix)
         ExitNow();
     }
 
-    // We must remove the old address before adding the new one.
+    // We must remove the old addresses before adding the new ones.
     netif.RemoveUnicastAddress(mMeshLocal64);
     netif.RemoveUnicastAddress(mMeshLocal16);
+    netif.UnsubscribeMulticast(mLinkLocalAllThreadNodes);
+    netif.UnsubscribeMulticast(mRealmLocalAllThreadNodes);
 
     memcpy(mMeshLocal64.GetAddress().mFields.m8, aMeshLocalPrefix, 8);
     memcpy(mMeshLocal16.GetAddress().mFields.m8, mMeshLocal64.GetAddress().mFields.m8, 8);
@@ -732,8 +736,10 @@ otError Mle::SetMeshLocalPrefix(const uint8_t *aMeshLocalPrefix)
     mRealmLocalAllThreadNodes.GetAddress().mFields.m8[3] = 64;
     memcpy(mRealmLocalAllThreadNodes.GetAddress().mFields.m8 + 4, mMeshLocal64.GetAddress().mFields.m8, 8);
 
-    // Add the address back into the table.
+    // Add the addresses back into the table.
     netif.AddUnicastAddress(mMeshLocal64);
+    netif.SubscribeMulticast(mLinkLocalAllThreadNodes);
+    netif.SubscribeMulticast(mRealmLocalAllThreadNodes);
 
     if (mRole >= OT_DEVICE_ROLE_CHILD)
     {
@@ -1906,8 +1912,9 @@ otError Mle::SendMessage(Message &aMessage, const Ip6::Address &aDestination)
                       nonce);
 
         aesCcm.SetKey(netif.GetKeyManager().GetCurrentMleKey(), 16);
-        aesCcm.Init(16 + 16 + header.GetHeaderLength(), aMessage.GetLength() - (header.GetLength() - 1),
-                    sizeof(tag), nonce, sizeof(nonce));
+        error = aesCcm.Init(16 + 16 + header.GetHeaderLength(), aMessage.GetLength() - (header.GetLength() - 1),
+                            sizeof(tag), nonce, sizeof(nonce));
+        assert(error == OT_ERROR_NONE);
 
         aesCcm.Header(&mLinkLocal64.GetAddress(), sizeof(mLinkLocal64.GetAddress()));
         aesCcm.Header(&aDestination, sizeof(aDestination));
@@ -2051,8 +2058,11 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
     GenerateNonce(macAddr, frameCounter, Mac::Frame::kSecEncMic32, nonce);
 
     aesCcm.SetKey(mleKey, 16);
-    aesCcm.Init(sizeof(aMessageInfo.GetPeerAddr()) + sizeof(aMessageInfo.GetSockAddr()) + header.GetHeaderLength(),
-                aMessage.GetLength() - aMessage.GetOffset(), sizeof(messageTag), nonce, sizeof(nonce));
+    SuccessOrExit(aesCcm.Init(sizeof(aMessageInfo.GetPeerAddr()) + sizeof(aMessageInfo.GetSockAddr()) +
+                              header.GetHeaderLength(),
+                              aMessage.GetLength() - aMessage.GetOffset(),
+                              sizeof(messageTag), nonce, sizeof(nonce)));
+
     aesCcm.Header(&aMessageInfo.GetPeerAddr(), sizeof(aMessageInfo.GetPeerAddr()));
     aesCcm.Header(&aMessageInfo.GetSockAddr(), sizeof(aMessageInfo.GetSockAddr()));
     aesCcm.Header(header.GetBytes() + 1, header.GetHeaderLength());

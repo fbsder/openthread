@@ -308,6 +308,8 @@ void Mac::StartEnergyScan(void)
 
 extern "C" void otPlatRadioEnergyScanDone(otInstance *aInstance, int8_t aEnergyScanMaxRssi)
 {
+    VerifyOrExit(otInstanceIsInitialized(aInstance));
+
 #if OPENTHREAD_ENABLE_RAW_LINK_API
 
     if (aInstance->mLinkRaw.IsEnabled())
@@ -319,6 +321,9 @@ extern "C" void otPlatRadioEnergyScanDone(otInstance *aInstance, int8_t aEnergyS
     {
         aInstance->mThreadNetif.GetMac().EnergyScanDone(aEnergyScanMaxRssi);
     }
+
+exit:
+    return;
 }
 
 void Mac::EnergyScanDone(int8_t aEnergyScanMaxRssi)
@@ -693,6 +698,7 @@ void Mac::ProcessTransmitSecurity(Frame &aFrame)
     Crypto::AesCcm aesCcm;
     const uint8_t *key = NULL;
     const ExtAddress *extAddress = NULL;
+    otError error;
 
     if (aFrame.GetSecurityEnabled() == false)
     {
@@ -759,7 +765,8 @@ void Mac::ProcessTransmitSecurity(Frame &aFrame)
     aesCcm.SetKey(key, 16);
     tagLength = aFrame.GetFooterLength() - Frame::kFcsSize;
 
-    aesCcm.Init(aFrame.GetHeaderLength(), aFrame.GetPayloadLength(), tagLength, nonce, sizeof(nonce));
+    error = aesCcm.Init(aFrame.GetHeaderLength(), aFrame.GetPayloadLength(), tagLength, nonce, sizeof(nonce));
+    assert(error == OT_ERROR_NONE);
 
     aesCcm.Header(aFrame.GetHeader(), aFrame.GetHeaderLength());
     aesCcm.Payload(aFrame.GetPayload(), aFrame.GetPayload(), aFrame.GetPayloadLength(), true);
@@ -853,9 +860,9 @@ exit:
 extern "C" void otPlatRadioTxStarted(otInstance *aInstance, otRadioFrame *aFrame)
 {
     otLogFuncEntry();
-
+    VerifyOrExit(otInstanceIsInitialized(aInstance));
     aInstance->mThreadNetif.GetMac().TransmitStartedTask(aFrame);
-
+exit:
     otLogFuncExit();
 }
 
@@ -875,6 +882,7 @@ extern "C" void otPlatRadioTransmitDone(otInstance *aInstance, otRadioFrame *aFr
                                         otError aError)
 {
     otLogFuncEntryMsg("%!otError!, aRxPending=%u", aError, aRxPending ? 1 : 0);
+    VerifyOrExit(otInstanceIsInitialized(aInstance));
 
 #if OPENTHREAD_ENABLE_RAW_LINK_API
 
@@ -888,6 +896,7 @@ extern "C" void otPlatRadioTransmitDone(otInstance *aInstance, otRadioFrame *aFr
         aInstance->mThreadNetif.GetMac().TransmitDoneTask(aFrame, aRxPending, aError);
     }
 
+exit:
     otLogFuncExit();
 }
 
@@ -969,6 +978,7 @@ extern "C" void otPlatRadioTxDone(otInstance *aInstance, otRadioFrame *aFrame, o
                                   otError aError)
 {
     otLogFuncEntryMsg("%!otError!", aError);
+    VerifyOrExit(otInstanceIsInitialized(aInstance));
 
 #if OPENTHREAD_ENABLE_RAW_LINK_API
 
@@ -982,6 +992,7 @@ extern "C" void otPlatRadioTxDone(otInstance *aInstance, otRadioFrame *aFrame, o
         aInstance->mThreadNetif.GetMac().TransmitDoneTask(aFrame, aAckFrame, aError);
     }
 
+exit:
     otLogFuncExit();
 }
 
@@ -1429,7 +1440,10 @@ otError Mac::ProcessReceiveSecurity(Frame &aFrame, const Address &aSrcAddr, Neig
     tagLength = aFrame.GetFooterLength() - Frame::kFcsSize;
 
     aesCcm.SetKey(macKey, 16);
-    aesCcm.Init(aFrame.GetHeaderLength(), aFrame.GetPayloadLength(), tagLength, nonce, sizeof(nonce));
+
+    error = aesCcm.Init(aFrame.GetHeaderLength(), aFrame.GetPayloadLength(), tagLength, nonce, sizeof(nonce));
+    VerifyOrExit(error == OT_ERROR_NONE, error = OT_ERROR_SECURITY);
+
     aesCcm.Header(aFrame.GetHeader(), aFrame.GetHeaderLength());
     aesCcm.Payload(aFrame.GetPayload(), aFrame.GetPayload(), aFrame.GetPayloadLength(), false);
     aesCcm.Finalize(tag, &tagLength);
@@ -1461,6 +1475,7 @@ exit:
 extern "C" void otPlatRadioReceiveDone(otInstance *aInstance, otRadioFrame *aFrame, otError aError)
 {
     otLogFuncEntryMsg("%!otError!", aError);
+    VerifyOrExit(otInstanceIsInitialized(aInstance));
 
 #if OPENTHREAD_ENABLE_RAW_LINK_API
 
@@ -1474,6 +1489,7 @@ extern "C" void otPlatRadioReceiveDone(otInstance *aInstance, otRadioFrame *aFra
         aInstance->mThreadNetif.GetMac().ReceiveDoneTask(static_cast<Frame *>(aFrame), aError);
     }
 
+exit:
     otLogFuncExit();
 }
 
