@@ -40,16 +40,9 @@
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
-#include "net/ip6_address.hpp"
 
 namespace ot {
 namespace Mac {
-
-void ExtAddress::Set(const Ip6::Address &aIpAddress)
-{
-    memcpy(m8, aIpAddress.GetIid(), sizeof(m8));
-    m8[0] ^= 0x02;
-}
 
 const char *Address::ToString(char *aBuf, uint16_t aSize) const
 {
@@ -868,6 +861,19 @@ otError Frame::SetCommandId(uint8_t aCommandId)
 
 exit:
     return error;
+}
+
+bool Frame::IsDataRequestCommand(void)
+{
+    bool isDataRequest = false;
+    uint8_t commandId = 0;
+
+    VerifyOrExit(GetType() == kFcfFrameMacCmd);
+    SuccessOrExit(GetCommandId(commandId));
+    isDataRequest = (commandId == kMacCmdDataRequest);
+
+exit:
+    return isDataRequest;
 }
 
 uint8_t Frame::GetHeaderLength(void)

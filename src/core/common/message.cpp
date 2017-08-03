@@ -44,13 +44,13 @@
 
 namespace ot {
 
-MessagePool::MessagePool(otInstance *aInstance) :
+MessagePool::MessagePool(otInstance &aInstance) :
     InstanceLocator(aInstance),
     mAllQueue()
 {
 #if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
     // Initialize Platform buffer pool management.
-    otPlatMessagePoolInit(GetInstance(), kNumBuffers, sizeof(Buffer));
+    otPlatMessagePoolInit(&GetInstance(), kNumBuffers, sizeof(Buffer));
 #else
     memset(mBuffers, 0, sizeof(mBuffers));
 
@@ -106,7 +106,7 @@ Buffer *MessagePool::NewBuffer(void)
 
 #if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
 
-    buffer = static_cast<Buffer *>(otPlatMessagePoolNew(GetInstance()));
+    buffer = static_cast<Buffer *>(otPlatMessagePoolNew(&GetInstance()));
 
 #else
 
@@ -136,7 +136,7 @@ otError MessagePool::FreeBuffers(Buffer *aBuffer)
     {
         tmpBuffer = aBuffer->GetNextBuffer();
 #if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
-        otPlatMessagePoolFree(GetInstance(), aBuffer);
+        otPlatMessagePoolFree(&GetInstance(), aBuffer);
 #else // OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
         aBuffer->SetNextBuffer(mFreeBuffers);
         mFreeBuffers = aBuffer;
@@ -153,7 +153,7 @@ otError MessagePool::ReclaimBuffers(int aNumBuffers)
     uint16_t numFreeBuffers;
 
 #if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
-    numFreeBuffers = otPlatMessagePoolNumFreeBuffers(GetInstance());
+    numFreeBuffers = otPlatMessagePoolNumFreeBuffers(&GetInstance());
 #else
     numFreeBuffers = mNumFreeBuffers;
 #endif
@@ -710,6 +710,24 @@ exit:
     return rval;
 }
 
+uint16_t Message::UpdateChecksum(uint16_t aChecksum, uint16_t aValue)
+{
+    uint16_t result = aChecksum + aValue;
+    return result + (result < aChecksum);
+}
+
+uint16_t Message::UpdateChecksum(uint16_t aChecksum, const void *aBuf, uint16_t aLength)
+{
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(aBuf);
+
+    for (int i = 0; i < aLength; i++)
+    {
+        aChecksum = UpdateChecksum(aChecksum, (i & 1) ? bytes[i] : static_cast<uint16_t>(bytes[i] << 8));
+    }
+
+    return aChecksum;
+}
+
 uint16_t Message::UpdateChecksum(uint16_t aChecksum, uint16_t aOffset, uint16_t aLength) const
 {
     Buffer *curBuffer;
@@ -730,7 +748,7 @@ uint16_t Message::UpdateChecksum(uint16_t aChecksum, uint16_t aOffset, uint16_t 
             bytesToCover = aLength;
         }
 
-        aChecksum = Ip6::Ip6::UpdateChecksum(aChecksum, GetFirstData() + aOffset, bytesToCover);
+        aChecksum = Message::UpdateChecksum(aChecksum, GetFirstData() + aOffset, bytesToCover);
 
         aLength -= bytesToCover;
         bytesCovered += bytesToCover;
@@ -765,7 +783,7 @@ uint16_t Message::UpdateChecksum(uint16_t aChecksum, uint16_t aOffset, uint16_t 
             bytesToCover = aLength;
         }
 
-        aChecksum = Ip6::Ip6::UpdateChecksum(aChecksum, curBuffer->GetData() + aOffset, bytesToCover);
+        aChecksum = Message::UpdateChecksum(aChecksum, curBuffer->GetData() + aOffset, bytesToCover);
 
         aLength -= bytesToCover;
         bytesCovered += bytesToCover;

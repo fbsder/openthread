@@ -954,7 +954,7 @@ otError MeshForwarder::GetMacSourceAddress(const Ip6::Address &aIp6Addr, Mac::Ad
     ThreadNetif &netif = GetNetif();
 
     aMacAddr.mLength = sizeof(aMacAddr.mExtAddress);
-    aMacAddr.mExtAddress.Set(aIp6Addr);
+    aIp6Addr.ToExtAddress(aMacAddr.mExtAddress);
 
     if (memcmp(&aMacAddr.mExtAddress, netif.GetMac().GetExtAddress(), sizeof(aMacAddr.mExtAddress)) != 0)
     {
@@ -991,7 +991,7 @@ otError MeshForwarder::GetMacDestinationAddress(const Ip6::Address &aIp6Addr, Ma
     else
     {
         aMacAddr.mLength = sizeof(aMacAddr.mExtAddress);
-        aMacAddr.mExtAddress.Set(aIp6Addr);
+        aIp6Addr.ToExtAddress(aMacAddr.mExtAddress);
     }
 
     return OT_ERROR_NONE;
@@ -1921,7 +1921,7 @@ void MeshForwarder::HandleMesh(uint8_t *aFrame, uint8_t aFrameLength, const Mac:
         meshHeader.SetHopsLeft(meshHeader.GetHopsLeft() - 1);
         meshHeader.AppendTo(aFrame);
 
-        VerifyOrExit((message = netif.GetIp6().mMessagePool.New(Message::kType6lowpan, 0)) != NULL,
+        VerifyOrExit((message = GetInstance().mMessagePool.New(Message::kType6lowpan, 0)) != NULL,
                      error = OT_ERROR_NO_BUFS);
         SuccessOrExit(error = message->SetLength(aFrameLength));
         message->Write(0, aFrameLength, aFrame);
@@ -1998,34 +1998,34 @@ void MeshForwarder::HandleFragment(uint8_t *aFrame, uint8_t aFrameLength,
 {
     ThreadNetif &netif = GetNetif();
     otError error = OT_ERROR_NONE;
-    Lowpan::FragmentHeader *fragmentHeader = reinterpret_cast<Lowpan::FragmentHeader *>(aFrame);
-    uint16_t datagramLength = fragmentHeader->GetDatagramSize();
-    uint16_t datagramTag = fragmentHeader->GetDatagramTag();
+    Lowpan::FragmentHeader fragmentHeader;
     Message *message = NULL;
     int headerLength;
 
-    if (fragmentHeader->GetDatagramOffset() == 0)
-    {
-        aFrame += fragmentHeader->GetHeaderLength();
-        aFrameLength -= fragmentHeader->GetHeaderLength();
+    // Check the fragment header
+    VerifyOrExit(fragmentHeader.Init(aFrame, aFrameLength) == OT_ERROR_NONE, error = OT_ERROR_DROP);
+    aFrame += fragmentHeader.GetHeaderLength();
+    aFrameLength -= fragmentHeader.GetHeaderLength();
 
-        VerifyOrExit((message = netif.GetIp6().mMessagePool.New(Message::kTypeIp6, 0)) != NULL,
+    if (fragmentHeader.GetDatagramOffset() == 0)
+    {
+        VerifyOrExit((message = GetInstance().mMessagePool.New(Message::kTypeIp6, 0)) != NULL,
                      error = OT_ERROR_NO_BUFS);
         message->SetLinkSecurityEnabled(aMessageInfo.mLinkSecurity);
         message->SetPanId(aMessageInfo.mPanId);
         message->AddRss(aMessageInfo.mRss);
         headerLength = netif.GetLowpan().Decompress(*message, aMacSource, aMacDest, aFrame, aFrameLength,
-                                                    datagramLength);
+                                                    fragmentHeader.GetDatagramSize());
         VerifyOrExit(headerLength > 0, error = OT_ERROR_PARSE);
 
         aFrame += headerLength;
         aFrameLength -= static_cast<uint8_t>(headerLength);
 
-        VerifyOrExit(datagramLength >= message->GetOffset() + aFrameLength, error = OT_ERROR_PARSE);
+        VerifyOrExit(fragmentHeader.GetDatagramSize() >= message->GetOffset() + aFrameLength, error = OT_ERROR_PARSE);
 
-        SuccessOrExit(error = message->SetLength(datagramLength));
+        SuccessOrExit(error = message->SetLength(fragmentHeader.GetDatagramSize()));
 
-        message->SetDatagramTag(datagramTag);
+        message->SetDatagramTag(fragmentHeader.GetDatagramTag());
         message->SetTimeout(kReassemblyTimeout);
 
         // copy Fragment
@@ -2053,15 +2053,13 @@ void MeshForwarder::HandleFragment(uint8_t *aFrame, uint8_t aFrameLength,
     }
     else
     {
-        aFrame += fragmentHeader->GetHeaderLength();
-        aFrameLength -= fragmentHeader->GetHeaderLength();
-
         for (message = mReassemblyList.GetHead(); message; message = message->GetNext())
         {
             // Security Check: only consider reassembly buffers that had the same Security Enabled setting.
-            if (message->GetLength() == datagramLength &&
-                message->GetDatagramTag() == datagramTag &&
-                message->GetOffset() == fragmentHeader->GetDatagramOffset() &&
+            if (message->GetLength() == fragmentHeader.GetDatagramSize() &&
+                message->GetDatagramTag() == fragmentHeader.GetDatagramTag() &&
+                message->GetOffset() == fragmentHeader.GetDatagramOffset() &&
+                message->GetOffset() + aFrameLength <= fragmentHeader.GetDatagramSize() &&
                 message->IsLinkSecurityEnabled() == aMessageInfo.mLinkSecurity)
             {
                 break;
@@ -2115,9 +2113,9 @@ exit:
             aFrameLength,
             aMacSource.ToString(srcStringBuffer, sizeof(srcStringBuffer)),
             aMacDest.ToString(dstStringBuffer, sizeof(dstStringBuffer)),
-            datagramTag,
-            fragmentHeader->GetDatagramOffset(),
-            datagramLength,
+            fragmentHeader.GetDatagramTag(),
+            fragmentHeader.GetDatagramOffset(),
+            fragmentHeader.GetDatagramSize(),
             aMessageInfo.mLinkSecurity ? "yes" : "no"
         );
 
@@ -2190,7 +2188,7 @@ void MeshForwarder::HandleLowpanHC(uint8_t *aFrame, uint8_t aFrameLength,
     Message *message;
     int headerLength;
 
-    VerifyOrExit((message = netif.GetIp6().mMessagePool.New(Message::kTypeIp6, 0)) != NULL,
+    VerifyOrExit((message = GetInstance().mMessagePool.New(Message::kTypeIp6, 0)) != NULL,
                  error = OT_ERROR_NO_BUFS);
     message->SetLinkSecurityEnabled(aMessageInfo.mLinkSecurity);
     message->SetPanId(aMessageInfo.mPanId);

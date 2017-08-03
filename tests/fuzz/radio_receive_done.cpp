@@ -29,7 +29,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <openthread/openthread.h>
+#include <openthread/instance.h>
+#include <openthread/ip6.h>
+#include <openthread/link.h>
+#include <openthread/thread.h>
+#include <openthread/types.h>
 #include <openthread/platform/radio.h>
 
 #include "common/code_utils.hpp"
