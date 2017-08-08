@@ -174,6 +174,8 @@ otError Ip6::InsertMplOption(Message &aMessage, Header &aIp6Header, MessageInfo 
             aMessage.Read(0, sizeof(hbh), &hbh);
             hbhLength = (hbh.GetLength() + 1) * 8;
 
+            VerifyOrExit(hbhLength <= aIp6Header.GetPayloadLength(), error = OT_ERROR_PARSE);
+
             // increase existing hop-by-hop option header length by 8 bytes
             hbh.SetLength(hbh.GetLength() + 1);
             aMessage.Write(0, sizeof(hbh), &hbh);
@@ -662,9 +664,9 @@ otError Ip6::SendRaw(Message &aMessage, int8_t aInterfaceId)
     otError error = OT_ERROR_NONE;
     Header header;
     MessageInfo messageInfo;
+    bool freed = false;
 
-    // check aMessage length
-    VerifyOrExit(aMessage.Read(0, sizeof(header), &header) == sizeof(header), error = OT_ERROR_DROP);
+    SuccessOrExit(error = header.Init(aMessage));
 
     messageInfo.SetPeerAddr(header.GetSource());
     messageInfo.SetSockAddr(header.GetDestination());
@@ -678,8 +680,15 @@ otError Ip6::SendRaw(Message &aMessage, int8_t aInterfaceId)
     }
 
     error = HandleDatagram(aMessage, NULL, aInterfaceId, NULL, true);
+    freed = true;
 
 exit:
+
+    if (!freed)
+    {
+        aMessage.Free();
+    }
+
     return error;
 }
 
@@ -689,7 +698,6 @@ otError Ip6::HandleDatagram(Message &aMessage, Netif *aNetif, int8_t aInterfaceI
     otError error = OT_ERROR_NONE;
     MessageInfo messageInfo;
     Header header;
-    uint16_t payloadLength;
     bool receive = false;
     bool forward = false;
     bool tunnel = false;
@@ -706,16 +714,7 @@ otError Ip6::HandleDatagram(Message &aMessage, Netif *aNetif, int8_t aInterfaceI
     dump("handle datagram", buf, aMessage.GetLength());
 #endif
 
-    // check aMessage length
-    VerifyOrExit(aMessage.Read(0, sizeof(header), &header) == sizeof(header), error = OT_ERROR_DROP);
-    payloadLength = header.GetPayloadLength();
-
-    // check Version
-    VerifyOrExit(header.IsVersion6(), error = OT_ERROR_DROP);
-
-    // check Payload Length
-    VerifyOrExit(sizeof(header) + payloadLength == aMessage.GetLength() &&
-                 sizeof(header) + payloadLength <= Ip6::kMaxDatagramLength, error = OT_ERROR_DROP);
+    SuccessOrExit(error = header.Init(aMessage));
 
     messageInfo.SetPeerAddr(header.GetSource());
     messageInfo.SetSockAddr(header.GetDestination());

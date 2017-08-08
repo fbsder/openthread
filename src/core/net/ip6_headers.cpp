@@ -26,57 +26,38 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
-#include <string.h>
+/**
+ * @file
+ *   This file implements IP6 header processing.
+ */
 
-#include <openthread/instance.h>
-#include <openthread/ip6.h>
-#include <openthread/link.h>
-#include <openthread/thread.h>
-#include <openthread/thread_ftd.h>
-#include <openthread/types.h>
-#include <openthread/platform/radio.h>
+#include <openthread/config.h>
 
-#include "common/code_utils.hpp"
+#include "ip6_headers.hpp"
 
-static otInstance *sInstance;
+#include "net/ip6.hpp"
 
-extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv)
+namespace ot {
+namespace Ip6 {
+
+otError Header::Init(const Message &aMessage)
 {
-    const otPanId panId = 0xdead;
+    otError error = OT_ERROR_NONE;
+    uint16_t length;
 
-    sInstance = otInstanceInitSingle();
-    otLinkSetPanId(sInstance, panId);
-    otIp6SetEnabled(sInstance, true);
-    otThreadSetEnabled(sInstance, true);
-    otThreadBecomeLeader(sInstance);
+    // check aMessage length
+    VerifyOrExit(aMessage.Read(0, sizeof(*this), this) == sizeof(*this), error = OT_ERROR_PARSE);
 
-    (void)argc;
-    (void)argv;
+    // check Version
+    VerifyOrExit(IsVersion6(), error = OT_ERROR_PARSE);
 
-    return 0;
-}
-
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
-{
-    otRadioFrame frame;
-    uint8_t *buf;
-
-    VerifyOrExit(size <= OT_RADIO_FRAME_MAX_SIZE);
-
-    buf = static_cast<uint8_t *>(malloc(size));
-
-    memset(&frame, 0, sizeof(frame));
-    frame.mPsdu = buf;
-    frame.mChannel = 11;
-    frame.mLength = static_cast<uint8_t>(size);
-
-    memcpy(buf, data, frame.mLength);
-
-    otPlatRadioReceiveDone(sInstance, &frame, OT_ERROR_NONE);
-
-    free(buf);
+    // check Payload Length
+    length = sizeof(*this) + GetPayloadLength();
+    VerifyOrExit(length == aMessage.GetLength() && length <= Ip6::kMaxDatagramLength, error = OT_ERROR_PARSE);
 
 exit:
-    return 0;
+    return error;
 }
+
+}  // namespace Ip6
+}  // namespace ot
