@@ -48,7 +48,6 @@ set -x
         --enable-ncp-app=all              \
         --with-ncp-bus=uart               \
         --with-examples=posix             \
-        --with-platform-info=POSIX        \
         --enable-application-coap         \
         --enable-border-router            \
         --enable-cert-log                 \
@@ -214,8 +213,16 @@ set -x
 [ $BUILD_TARGET != posix ] || {
     sh -c '$CC --version' || die
     sh -c '$CXX --version' || die
+
+    git checkout -- . || die
+    git clean -xfd || die
     ./bootstrap || die
-    make -f examples/Makefile-posix || die
+    CPPFLAGS=-DOPENTHREAD_CONFIG_LOG_LEVEL=OT_LOG_LEVEL_NONE make -f examples/Makefile-posix || die
+
+    git checkout -- . || die
+    git clean -xfd || die
+    ./bootstrap || die
+    CPPFLAGS=-DOPENTHREAD_CONFIG_LOG_LEVEL=OT_LOG_LEVEL_DEBG make -f examples/Makefile-posix || die
 }
 
 [ $BUILD_TARGET != posix-distcheck ] || {
@@ -232,7 +239,7 @@ set -x
 
 [ $BUILD_TARGET != posix-ncp-spi ] || {
     ./bootstrap || die
-    make -f examples/Makefile-posix check configure_OPTIONS="--enable-ncp-app=ftd --with-ncp-bus=spi --with-examples=posix --with-platform-info=POSIX" || die
+    make -f examples/Makefile-posix check configure_OPTIONS="--enable-ncp-app=ftd --with-ncp-bus=spi --with-examples=posix" || die
 }
 
 [ $BUILD_TARGET != posix-ncp ] || {
