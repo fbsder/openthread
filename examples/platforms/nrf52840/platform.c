@@ -32,6 +32,9 @@
  *
  */
 
+#include <openthread/config.h>
+#include <openthread-core-config.h>
+
 #include <openthread/platform/logging.h>
 
 #include <device/nrf.h>
@@ -54,7 +57,7 @@ void PlatformInit(int argc, char *argv[])
 
     nrf_drv_clock_init();
 
-#if (OPENTHREAD_CONFIG_ENABLE_DEFAULT_LOG_OUTPUT == 0)
+#if (OPENTHREAD_CONFIG_LOG_OUTPUT == OPENTHREAD_CONFIG_LOG_OUTPUT_PLATFORM_DEFINED)
     nrf5LogInit();
 #endif
     nrf5AlarmInit();
@@ -63,17 +66,19 @@ void PlatformInit(int argc, char *argv[])
     nrf5MiscInit();
     nrf5CryptoInit();
     nrf5RadioInit();
+    nrf5TempInit();
 }
 
 void PlatformDeinit(void)
 {
+    nrf5TempDeinit();
     nrf5RadioDeinit();
     nrf5CryptoDeinit();
     nrf5MiscDeinit();
     nrf5UartDeinit();
     nrf5RandomDeinit();
     nrf5AlarmDeinit();
-#if (OPENTHREAD_CONFIG_ENABLE_DEFAULT_LOG_OUTPUT == 0)
+#if (OPENTHREAD_CONFIG_LOG_OUTPUT == OPENTHREAD_CONFIG_LOG_OUTPUT_PLATFORM_DEFINED)
     nrf5LogDeinit();
 #endif
 }

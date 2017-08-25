@@ -95,6 +95,7 @@ const NcpBase::GetPropertyHandlerEntry NcpBase::mGetPropertyHandlerTable[] =
     NCP_GET_PROP_HANDLER_ENTRY(INTERFACE_TYPE),
     NCP_GET_PROP_HANDLER_ENTRY(LAST_STATUS),
     NCP_GET_PROP_HANDLER_ENTRY(LOCK),
+    NCP_GET_PROP_HANDLER_ENTRY(PHY_ENABLED),
     NCP_GET_PROP_HANDLER_ENTRY(PHY_CHAN),
     NCP_GET_PROP_HANDLER_ENTRY(PHY_RX_SENSITIVITY),
     NCP_GET_PROP_HANDLER_ENTRY(PHY_TX_POWER),
@@ -102,17 +103,13 @@ const NcpBase::GetPropertyHandlerEntry NcpBase::mGetPropertyHandlerTable[] =
     NCP_GET_PROP_HANDLER_ENTRY(PROTOCOL_VERSION),
     NCP_GET_PROP_HANDLER_ENTRY(MAC_15_4_PANID),
     NCP_GET_PROP_HANDLER_ENTRY(MAC_15_4_LADDR),
+    NCP_GET_PROP_HANDLER_ENTRY(MAC_15_4_SADDR),
     NCP_GET_PROP_HANDLER_ENTRY(MAC_RAW_STREAM_ENABLED),
     NCP_GET_PROP_HANDLER_ENTRY(MAC_PROMISCUOUS_MODE),
     NCP_GET_PROP_HANDLER_ENTRY(NCP_VERSION),
     NCP_GET_PROP_HANDLER_ENTRY(UNSOL_UPDATE_FILTER),
     NCP_GET_PROP_HANDLER_ENTRY(UNSOL_UPDATE_LIST),
     NCP_GET_PROP_HANDLER_ENTRY(VENDOR_ID),
-#if OPENTHREAD_ENABLE_RAW_LINK_API
-    NCP_GET_PROP_HANDLER_ENTRY(PHY_ENABLED),
-    NCP_GET_PROP_HANDLER_ENTRY(MAC_15_4_SADDR),
-#endif
-
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
     NCP_GET_PROP_HANDLER_ENTRY(MAC_DATA_POLL_PERIOD),
     NCP_GET_PROP_HANDLER_ENTRY(MAC_EXTENDED_ADDR),
@@ -1003,22 +1000,30 @@ otError NcpBase::HandleCommand(uint8_t aHeader, unsigned int aCommand, const uin
         SPINEL_HEADER_GET_IID(aHeader) == 0,
         error = SendLastStatus(aHeader, SPINEL_STATUS_INVALID_INTERFACE)
     );
-
-    for (i = 0; i < sizeof(mCommandHandlerTable) / sizeof(mCommandHandlerTable[0]); i++)
+#if OPENTHREAD_ENABLE_SPINEL_VENDOR_SUPPORT
+    if (aCommand >= SPINEL_CMD_VENDOR__BEGIN && aCommand < SPINEL_CMD_VENDOR__END)
     {
-        if (mCommandHandlerTable[i].mCommand == aCommand)
-        {
-            break;
-        }
-    }
-
-    if (i < sizeof(mCommandHandlerTable) / sizeof(mCommandHandlerTable[0]))
-    {
-        error = (this->*mCommandHandlerTable[i].mHandler)(aHeader, aCommand, aArgPtr, aArgLen);
+        error = VendorCommandHandler(aHeader, aCommand, aArgPtr, aArgLen);
     }
     else
+#endif // OPENTHREAD_ENABLE_SPINEL_VENDOR_SUPPORT
     {
-        error = SendLastStatus(aHeader, SPINEL_STATUS_INVALID_COMMAND);
+        for (i = 0; i < sizeof(mCommandHandlerTable) / sizeof(mCommandHandlerTable[0]); i++)
+        {
+            if (mCommandHandlerTable[i].mCommand == aCommand)
+            {
+                break;
+            }
+        }
+
+        if (i < sizeof(mCommandHandlerTable) / sizeof(mCommandHandlerTable[0]))
+        {
+            error = (this->*mCommandHandlerTable[i].mHandler)(aHeader, aCommand, aArgPtr, aArgLen);
+        }
+        else
+        {
+            error = SendLastStatus(aHeader, SPINEL_STATUS_INVALID_COMMAND);
+        }
     }
 
 exit:
@@ -1539,6 +1544,21 @@ exit:
 // MARK: Individual Property Getters and Setters
 // ----------------------------------------------------------------------------
 
+otError NcpBase::GetPropertyHandler_PHY_ENABLED(uint8_t aHeader, spinel_prop_key_t aKey)
+{
+    return SendPropertyUpdate(
+               aHeader,
+               SPINEL_CMD_PROP_VALUE_IS,
+               aKey,
+               SPINEL_DATATYPE_BOOL_S,
+#if OPENTHREAD_ENABLE_RAW_LINK_API
+               otLinkRawIsEnabled(mInstance)
+#else
+               false
+#endif // OPENTHREAD_ENABLE_RAW_LINK_API
+           );
+}
+
 otError NcpBase::GetPropertyHandler_PHY_CHAN(uint8_t aHeader, spinel_prop_key_t aKey)
 {
     return SendPropertyUpdate(
@@ -1705,6 +1725,17 @@ otError NcpBase::SetPropertyHandler_MAC_15_4_LADDR(uint8_t aHeader, spinel_prop_
 
 exit:
     return SendSetPropertyResponse(aHeader, aKey, error);
+}
+
+otError NcpBase::GetPropertyHandler_MAC_15_4_SADDR(uint8_t aHeader, spinel_prop_key_t aKey)
+{
+    return SendPropertyUpdate(
+               aHeader,
+               SPINEL_CMD_PROP_VALUE_IS,
+               aKey,
+               SPINEL_DATATYPE_UINT16_S,
+               otLinkGetShortAddress(mInstance)
+           );
 }
 
 otError NcpBase::GetPropertyHandler_MAC_RAW_STREAM_ENABLED(uint8_t aHeader, spinel_prop_key_t aKey)
@@ -2404,4 +2435,24 @@ otError otNcpStreamWrite(int aStreamId, const uint8_t *aDataPtr, int aDataLen)
     }
 
     return error;
+}
+
+
+extern "C" void otNcpPlatLogv(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, va_list ap)
+{
+    char logString[128];
+    int charsWritten;
+
+    if ((charsWritten = vsnprintf(logString, sizeof(logString), aFormat, ap)) > 0)
+    {
+        if (charsWritten > static_cast<int>(sizeof(logString) - 1))
+        {
+            charsWritten = static_cast<int>(sizeof(logString) - 1);
+        }
+
+        otNcpStreamWrite(0, reinterpret_cast<uint8_t *>(logString), charsWritten);
+    }
+
+    OT_UNUSED_VARIABLE(aLogLevel);
+    OT_UNUSED_VARIABLE(aLogRegion);
 }

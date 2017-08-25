@@ -33,10 +33,8 @@
  */
 
 #include <openthread/config.h>
-// NRF tools use #define PACKAGE - for other purposes
-// ie: the physical package the chip comes in
-// This conflicts with the GNU Autoconf "PACAKGE" define
-#undef PACKAGE
+#include <openthread/config.h>
+#include <openthread-core-config.h>
 
 #include <assert.h>
 #include <stdbool.h>
@@ -620,13 +618,6 @@ void nrf5RadioProcess(otInstance *aInstance)
 void nrf_drv_radio802154_received_raw(uint8_t *p_data, int8_t power, int8_t lqi)
 {
     otRadioFrame *receivedFrame = NULL;
-
-    if (isPendingEventSet(kPendingEventTransmit))
-    {
-        nrf_drv_radio802154_buffer_free_raw(p_data);
-
-        return;
-    }
 
     for (uint32_t i = 0; i < RADIO_RX_BUFFERS; i++)
     {

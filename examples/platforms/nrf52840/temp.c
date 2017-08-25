@@ -26,54 +26,46 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @file
- *   This file includes the platform-specific initializers.
- *
- */
-
-#ifndef PLATFORM_QORVO_H_
-#define PLATFORM_QORVO_H_
-
-#include <openthread/config.h>
-#include <openthread-core-config.h>
+#include <limits.h>
 #include <stdint.h>
-#include <openthread/types.h>
+#include <string.h>
 
-typedef void     (*qorvoPlatPollFunction_t)(uint8_t);
-typedef uint8_t  (*qorvoPlatGotoSleepCheckCallback_t) (void);
+#include <utils/code_utils.h>
+#include <hal/nrf_temp.h>
 
-/**
- * This function registers a callback to a file descriptor.
- *
- * @param[in]  fd            The file descriptor.
- * @param[in]  pollFunction  The callback which should be called when data is ready or needed for the file descriptor.
- *
- */
-void qorvoPlatRegisterPollFunction(int fd, qorvoPlatPollFunction_t pollFunction);
+#include "platform-nrf5.h"
 
-/**
- * This function unregisters a callback for a file descriptor.
- *
- * @param[in]  fd            The file descriptor.
- *
- */
-void qorvoPlatUnRegisterPollFunction(int fd);
+__STATIC_INLINE void dataReadyEventClear(void)
+{
+    NRF_TEMP->EVENTS_DATARDY = 0;
+    volatile uint32_t dummy = NRF_TEMP->EVENTS_DATARDY;
+    (void)dummy;
+}
 
-/**
- * This function initializes the platform.
- *
- * @param[in]  gotoSleepCheckCallback  The callback which needs to return if sleep is allowed.
- *
- */
-void qorvoPlatInit(qorvoPlatGotoSleepCheckCallback_t gotoSleepCheckCallback);
+void nrf5TempInit(void)
+{
+    nrf_temp_init();
+}
 
-/**
- * This function runs the main loop of the platform once.
- *
- * @param[in]  canGoToSleep  Indicates if the platform can got to sleep.
- *
- */
-void qorvoPlatMainLoop(bool canGoToSleep);
+void nrf5TempDeinit(void)
+{
+    NRF_TEMP->TASKS_STOP = 1;
+}
 
-#endif  // PLATFORM_QORVO_H_
+int32_t nrf5TempGet(void)
+{
+    NRF_TEMP->TASKS_START = 1;
+
+    while (NRF_TEMP->EVENTS_DATARDY == 0)
+    {
+        ;
+    }
+
+    dataReadyEventClear();
+
+    int32_t temperature = nrf_temp_read();
+
+    NRF_TEMP->TASKS_STOP = 1;
+
+    return temperature;
+}

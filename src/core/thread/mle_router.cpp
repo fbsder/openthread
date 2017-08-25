@@ -1610,7 +1610,7 @@ void MleRouter::UpdateRoutes(const RouteTlv &aRoute, uint8_t aRouterId)
     }
     while (update);
 
-#if 1
+#if (OPENTHREAD_CONFIG_LOG_MLE && (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_DEBG))
 
     for (uint8_t i = 0; i <= kMaxRouterId; i++)
     {
@@ -2839,11 +2839,13 @@ otError MleRouter::SendChildUpdateRequest(Child *aChild)
     SuccessOrExit(error = AppendNetworkData(*message, !aChild->IsFullNetworkData()));
     SuccessOrExit(error = AppendActiveTimestamp(*message));
     SuccessOrExit(error = AppendPendingTimestamp(*message));
-    SuccessOrExit(error = AppendTlvRequest(*message, tlvs, sizeof(tlvs)));
 
-    aChild->GenerateChallenge();
-
-    SuccessOrExit(error = AppendChallenge(*message, aChild->GetChallenge(), aChild->GetChallengeSize()));
+    if (aChild->GetState() != Neighbor::kStateValid)
+    {
+        SuccessOrExit(error = AppendTlvRequest(*message, tlvs, sizeof(tlvs)));
+        aChild->GenerateChallenge();
+        SuccessOrExit(error = AppendChallenge(*message, aChild->GetChallenge(), aChild->GetChallengeSize()));
+    }
 
     memset(&destination, 0, sizeof(destination));
     destination.mFields.m16[0] = HostSwap16(0xfe80);
