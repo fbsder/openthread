@@ -123,6 +123,13 @@ otError otMessageQueueEnqueue(otMessageQueue *aQueue, otMessage *aMessage)
     return queue->Enqueue(*message);
 }
 
+otError otMessageQueueEnqueueAtHead(otMessageQueue *aQueue, otMessage *aMessage)
+{
+    Message *message = static_cast<Message *>(aMessage);
+    MessageQueue *queue = static_cast<MessageQueue *>(aQueue);
+    return queue->Enqueue(*message, MessageQueue::kQueuePositionHead);
+}
+
 otError otMessageQueueDequeue(otMessageQueue *aQueue, otMessage *aMessage)
 {
     Message *message = static_cast<Message *>(aMessage);
@@ -152,6 +159,8 @@ exit:
 
 void otMessageGetBufferInfo(otInstance *aInstance, otBufferInfo *aBufferInfo)
 {
+    uint16_t messages, buffers;
+
     aBufferInfo->mTotalBuffers = OPENTHREAD_CONFIG_NUM_MESSAGE_BUFFERS;
 
     aBufferInfo->mFreeBuffers = aInstance->mMessagePool.GetFreeBufferCount();
@@ -176,4 +185,29 @@ void otMessageGetBufferInfo(otInstance *aInstance, otBufferInfo *aBufferInfo)
 
     aInstance->mThreadNetif.GetCoap().GetRequestMessages().GetInfo(aBufferInfo->mCoapMessages,
                                                                    aBufferInfo->mCoapBuffers);
+    aInstance->mThreadNetif.GetCoap().GetCachedResponses().GetInfo(messages, buffers);
+    aBufferInfo->mCoapMessages += messages;
+    aBufferInfo->mCoapBuffers += buffers;
+
+#if OPENTHREAD_ENABLE_DTLS
+    aInstance->mThreadNetif.GetCoapSecure().GetRequestMessages().GetInfo(aBufferInfo->mCoapSecureMessages,
+                                                                         aBufferInfo->mCoapSecureBuffers);
+    aInstance->mThreadNetif.GetCoapSecure().GetCachedResponses().GetInfo(messages, buffers);
+    aBufferInfo->mCoapSecureMessages += messages;
+    aBufferInfo->mCoapSecureBuffers += buffers;
+#else
+    aBufferInfo->mCoapSecureMessages = 0;
+    aBufferInfo->mCoapSecureBuffers = 0;
+#endif
+
+#if OPENTHREAD_ENABLE_APPLICATION_COAP
+    aInstance->mApplicationCoap.GetRequestMessages().GetInfo(aBufferInfo->mApplicationCoapMessages,
+                                                             aBufferInfo->mApplicationCoapBuffers);
+    aInstance->mApplicationCoap.GetCachedResponses().GetInfo(messages, buffers);
+    aBufferInfo->mApplicationCoapMessages += messages;
+    aBufferInfo->mApplicationCoapBuffers += buffers;
+#else
+    aBufferInfo->mApplicationCoapMessages = 0;
+    aBufferInfo->mApplicationCoapBuffers = 0;
+#endif
 }

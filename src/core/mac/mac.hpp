@@ -141,7 +141,7 @@ public:
     }
 
 private:
-    void HandleReceivedFrame(Frame &frame) { mReceiveFrameHandler(*this, frame); }
+    void HandleReceivedFrame(Frame &aFrame) { mReceiveFrameHandler(*this, aFrame); }
 
     void HandleDataPollTimeout(void) {
         if (mPollTimeoutHandler != NULL) {
@@ -198,8 +198,8 @@ public:
     }
 
 private:
-    otError HandleFrameRequest(Frame &frame) { return mFrameRequestHandler(*this, frame); }
-    void HandleSentFrame(Frame &frame, otError error) { mSentFrameHandler(*this, frame, error); }
+    otError HandleFrameRequest(Frame &aFrame) { return mFrameRequestHandler(*this, aFrame); }
+    void HandleSentFrame(Frame &aFrame, otError aError) { mSentFrameHandler(*this, aFrame, aError); }
 
     FrameRequestHandler mFrameRequestHandler;
     SentFrameHandler mSentFrameHandler;
@@ -587,16 +587,16 @@ public:
      */
     void ResetCounters(void);
 
-#if OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_IF_JOINABLE
+#if OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_WHEN_JOINABLE
     /**
-     * This method indicates if the beacon is joinable or non-joinable
+     * This method indicates if the device is in joinable state or not.
      *
-     * @retval true   Beacon is joinable.
-     * @retval false  Beacon is non-joinable.
+     * @retval true   Device is joinable.
+     * @retval false  Device is non-joinable.
      *
      */
     bool IsBeaconJoinable(void);
-#endif // OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_IF_JOINABLE
+#endif // OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_WHEN_JOINABLE
 
     /**
      * This method returns the MAC counter.

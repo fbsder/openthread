@@ -35,8 +35,6 @@
 #ifndef OPENTHREAD_TYPES_H_
 #define OPENTHREAD_TYPES_H_
 
-#include <openthread/config.h>
-
 #include <stdint.h>
 #include <stdbool.h>
 #ifdef OTDLL
@@ -205,9 +203,9 @@ typedef enum otError
     OT_ERROR_INVALID_SOURCE_ADDRESS = 20,
 
     /**
-     * Received a frame filtered by the whitelist.
+     * Received a frame filtered by the address filter (whitelisted or blacklisted).
      */
-    OT_ERROR_WHITELIST_FILTERED = 21,
+    OT_ERROR_ADDRESS_FILTERED = 21,
 
     /**
      * Received a frame filtered by the destination address check.
@@ -223,11 +221,6 @@ typedef enum otError
      * The operation is already in progress.
      */
     OT_ERROR_ALREADY = 24,
-
-    /**
-     * Received a frame filtered by the blacklist.
-     */
-    OT_ERROR_BLACKLIST_FILTERED = 25,
 
     /**
      * The creation of IPv6 address failed.
@@ -650,7 +643,7 @@ typedef struct otLinkModeConfig
     bool mRxOnWhenIdle : 1;
 
     /**
-     * 1, if the sender will use IEEE 802.15.4 to secure all data requests.  0, otherwise.
+     * 1, if the sender uses IEEE 802.15.4 to secure all data requests.  0, otherwise.
      */
     bool mSecureDataRequests : 1;
 
@@ -685,6 +678,8 @@ enum
     OT_CHANGED_THREAD_CHILD_REMOVED         = 1 << 11,  ///< Child was removed
     OT_CHANGED_IP6_MULTICAST_SUBSRCRIBED    = 1 << 12,  ///< Subscribed to a IPv6 multicast address
     OT_CHANGED_IP6_MULTICAST_UNSUBSRCRIBED  = 1 << 13,  ///< Unsubscribed from a IPv6 multicast address
+    OT_CHANGED_COMMISSIONER_STATE           = 1 << 14,  ///< Commissioner state changed
+    OT_CHANGED_JOINER_STATE                 = 1 << 15,  ///< Joiner state changed
 };
 
 /**
@@ -696,9 +691,9 @@ typedef struct otIp6Prefix
     uint8_t       mLength;  ///< The IPv6 prefix length.
 } otIp6Prefix;
 
-#define OT_NETWORK_DATA_ITERATOR_INIT  0  ///< Initializer for otNetworkDataIterator.
+#define OT_NETWORK_DATA_ITERATOR_INIT  0    ///< Initializer for otNetworkDataIterator.
 
-typedef uint16_t otNetworkDataIterator;  ///< Used to iterate through Network Data information.
+typedef uint32_t otNetworkDataIterator;     ///< Used to iterate through Network Data information.
 
 /**
  * This structure represents a Border Router configuration.
@@ -769,7 +764,7 @@ typedef struct otExternalRouteConfig
     /**
      * The Rloc associated with the external route entry.
      *
-     * This value is ignored when adding an external route. For any added route the device's Rloc will be used.
+     * This value is ignored when adding an external route. For any added route, the device's Rloc is used.
      */
     uint16_t mRloc16;
 
@@ -953,6 +948,7 @@ typedef struct otMacCounters
     uint32_t mTxRetry;                ///< The number of retransmission times.
     uint32_t mTxErrCca;               ///< The number of CCA failure times.
     uint32_t mTxErrAbort;             ///< The number of frame transmission failures due to abort error.
+    uint32_t mTxErrBusyChannel;       ///< The number of frames that were dropped due to a busy channel.
     uint32_t mRxTotal;                ///< The total number of received packets.
     uint32_t mRxUnicast;              ///< The total number of unicast packets received.
     uint32_t mRxBroadcast;            ///< The total number of broadcast packets received.
@@ -961,7 +957,7 @@ typedef struct otMacCounters
     uint32_t mRxBeacon;               ///< The number of received beacon.
     uint32_t mRxBeaconRequest;        ///< The number of received beacon request.
     uint32_t mRxOther;                ///< The number of received other types of frames.
-    uint32_t mRxWhitelistFiltered;    ///< The number of received packets filtered by whitelist.
+    uint32_t mRxAddressFiltered;      ///< The number of received packets filtered by address filter (whitelist or blacklist).
     uint32_t mRxDestAddrFiltered;     ///< The number of received packets filtered by destination check.
     uint32_t mRxDuplicated;           ///< The number of received duplicated packets.
     uint32_t mRxErrNoFrame;           ///< The number of received packets that do not contain contents.
@@ -1006,6 +1002,8 @@ typedef struct otBufferInfo
     uint16_t mCoapBuffers;            ///< The number of buffers in the CoAP send queue.
     uint16_t mCoapSecureMessages;     ///< The number of messages in the CoAP secure send queue.
     uint16_t mCoapSecureBuffers;      ///< The number of buffers in the CoAP secure send queue.
+    uint16_t mApplicationCoapMessages;///< The number of messages in the application CoAP send queue.
+    uint16_t mApplicationCoapBuffers; ///< The number of buffers in the application CoAP send queue.
 } otBufferInfo;
 
 /**
@@ -1100,9 +1098,8 @@ typedef void (OTCALL *otDeviceAvailabilityChangedCallback)(bool aAdded, const GU
 /**
  * Log levels.
  *
- * Implimentation note: Log Levels are defines so that embedded
- * implimentations can elimiate code at compile time via if/else/endif
- * See openthread/platform/logging.h for details.
+ * Implementation note: Log Levels are defines so that embedded implementations can eliminate code at compile time via
+ * #if/#else/#endif. See `openthread/platform/logging.h` for details.
  *
  * @sa OT_LOG_LEVEL_NONE and related macros.
  */
@@ -1127,7 +1124,7 @@ typedef enum otLogRegion
     OT_LOG_REGION_NET_DIAG = 11, ///< Network Diagnostic
     OT_LOG_REGION_PLATFORM = 12, ///< Platform
     OT_LOG_REGION_COAP     = 13, ///< CoAP
-    OT_LOG_REGION_CLI      = 14, ///< Cli
+    OT_LOG_REGION_CLI      = 14, ///< CLI
 } otLogRegion;
 
 

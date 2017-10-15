@@ -43,6 +43,7 @@
 #include <openthread/platform/alarm-micro.h>
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/diag.h>
+#include <openthread/platform/platform.h>
 
 #include "platform-config.h"
 #include "platform-nrf5.h"
@@ -55,8 +56,6 @@
 #include <openthread/types.h>
 
 #define RTC_FREQUENCY       32768ULL
-
-#define CEIL_DIV(A, B)      (((A) + (B) - 1ULL) / (B))
 
 #define US_PER_MS           1000ULL
 #define US_PER_S            1000000ULL
@@ -180,6 +179,7 @@ static void HandleCompareMatch(AlarmIndex aIndex, bool aSkipCheck)
         nrf_rtc_int_disable(RTC_INSTANCE, sChannelData[aIndex].mCompareInt);
 
         sTimerData[aIndex].mFireAlarm = true;
+        PlatformEventSignalPending();
     }
 }
 

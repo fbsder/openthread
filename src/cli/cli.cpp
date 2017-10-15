@@ -162,6 +162,9 @@ const struct Command Interpreter::sCommands[] =
 #endif
     { "masterkey", &Interpreter::ProcessMasterKey },
     { "mode", &Interpreter::ProcessMode },
+#if OPENTHREAD_FTD
+    { "neighbor", &Interpreter::ProcessNeighbor },
+#endif
 #if OPENTHREAD_ENABLE_BORDER_ROUTER
     { "netdataregister", &Interpreter::ProcessNetworkDataRegister },
 #endif
@@ -246,6 +249,8 @@ Interpreter::Interpreter(otInstance *aInstance):
 #if OPENTHREAD_ENABLE_APPLICATION_COAP
     mCoap(*this),
 #endif
+    mUserCommands(NULL),
+    mUserCommandsLength(0),
     mServer(NULL),
 #ifdef OTDLL
     mApiInstance(otApiInit()),
@@ -378,6 +383,11 @@ void Interpreter::ProcessHelp(int argc, char *argv[])
         mServer->OutputFormat("%s\r\n", sCommands[i].mName);
     }
 
+    for (unsigned int i = 0; i < mUserCommandsLength; i++)
+    {
+        mServer->OutputFormat("%s\r\n", mUserCommands[i].mName);
+    }
+
     OT_UNUSED_VARIABLE(argc);
     OT_UNUSED_VARIABLE(argv);
 }
@@ -431,6 +441,8 @@ void Interpreter::ProcessBufferInfo(int argc, char *argv[])
     mServer->OutputFormat("arp: %d %d\r\n", bufferInfo.mArpMessages, bufferInfo.mArpBuffers);
     mServer->OutputFormat("coap: %d %d\r\n", bufferInfo.mCoapMessages, bufferInfo.mCoapBuffers);
     mServer->OutputFormat("coap secure: %d %d\r\n", bufferInfo.mCoapSecureMessages, bufferInfo.mCoapSecureBuffers);
+    mServer->OutputFormat("application coap: %d %d\r\n", bufferInfo.mApplicationCoapMessages,
+                          bufferInfo.mApplicationCoapBuffers);
 
     AppendResult(OT_ERROR_NONE);
 }
@@ -667,6 +679,7 @@ void Interpreter::ProcessCounters(int argc, char *argv[])
             mServer->OutputFormat("    TxOther: %d\r\n", counters->mTxOther);
             mServer->OutputFormat("    TxRetry: %d\r\n", counters->mTxRetry);
             mServer->OutputFormat("    TxErrCca: %d\r\n", counters->mTxErrCca);
+            mServer->OutputFormat("    TxErrBusyChannel: %d\r\n", counters->mTxErrBusyChannel);
             mServer->OutputFormat("RxTotal: %d\r\n", counters->mRxTotal);
             mServer->OutputFormat("    RxUnicast: %d\r\n", counters->mRxUnicast);
             mServer->OutputFormat("    RxBroadcast: %d\r\n", counters->mRxBroadcast);
@@ -675,7 +688,7 @@ void Interpreter::ProcessCounters(int argc, char *argv[])
             mServer->OutputFormat("    RxBeacon: %d\r\n", counters->mRxBeacon);
             mServer->OutputFormat("    RxBeaconRequest: %d\r\n", counters->mRxBeaconRequest);
             mServer->OutputFormat("    RxOther: %d\r\n", counters->mRxOther);
-            mServer->OutputFormat("    RxWhitelistFiltered: %d\r\n", counters->mRxWhitelistFiltered);
+            mServer->OutputFormat("    RxAddressFiltered: %d\r\n", counters->mRxAddressFiltered);
             mServer->OutputFormat("    RxDestAddrFiltered: %d\r\n", counters->mRxDestAddrFiltered);
             mServer->OutputFormat("    RxDuplicated: %d\r\n", counters->mRxDuplicated);
             mServer->OutputFormat("    RxErrNoFrame: %d\r\n", counters->mRxErrNoFrame);
@@ -1398,6 +1411,64 @@ void Interpreter::ProcessMode(int argc, char *argv[])
 exit:
     AppendResult(error);
 }
+
+#if OPENTHREAD_FTD
+void Interpreter::ProcessNeighbor(int argc, char *argv[])
+{
+    otError error = OT_ERROR_NONE;
+    otNeighborInfo neighborInfo;
+    bool isTable = false;
+    otNeighborInfoIterator iterator = OT_NEIGHBOR_INFO_ITERATOR_INIT;
+
+    VerifyOrExit(argc > 0, error = OT_ERROR_PARSE);
+
+    if (strcmp(argv[0], "list") == 0 || (isTable = (strcmp(argv[0], "table") == 0)))
+    {
+        if (isTable)
+        {
+            mServer->OutputFormat("| Role | RLOC16 | Age | Avg RSSI | Last RSSI |R|S|D|N| Extended MAC     |\r\n");
+            mServer->OutputFormat("+------+--------+-----+----------+-----------+-+-+-+-+------------------+\r\n");
+        }
+
+        while (otThreadGetNextNeighborInfo(mInstance, &iterator, &neighborInfo) == OT_ERROR_NONE)
+        {
+            if (isTable)
+            {
+                mServer->OutputFormat("| %3c  ", neighborInfo.mIsChild ? 'C' : 'R');
+                mServer->OutputFormat("| 0x%04x ", neighborInfo.mRloc16);
+                mServer->OutputFormat("| %3d ", neighborInfo.mAge);
+                mServer->OutputFormat("| %8d ", neighborInfo.mAverageRssi);
+                mServer->OutputFormat("| %9d ", neighborInfo.mLastRssi);
+                mServer->OutputFormat("|%1d", neighborInfo.mRxOnWhenIdle);
+                mServer->OutputFormat("|%1d", neighborInfo.mSecureDataRequest);
+                mServer->OutputFormat("|%1d", neighborInfo.mFullFunction);
+                mServer->OutputFormat("|%1d", neighborInfo.mFullNetworkData);
+                mServer->OutputFormat("| ");
+
+                for (size_t j = 0; j < sizeof(neighborInfo.mExtAddress); j++)
+                {
+                    mServer->OutputFormat("%02x", neighborInfo.mExtAddress.m8[j]);
+                }
+
+                mServer->OutputFormat(" |\r\n");
+            }
+            else
+            {
+                mServer->OutputFormat("0x%04x ", neighborInfo.mRloc16);
+            }
+        }
+
+        mServer->OutputFormat("\r\n");
+    }
+    else
+    {
+        error = OT_ERROR_PARSE;
+    }
+
+exit:
+    AppendResult(error);
+}
+#endif
 
 #if OPENTHREAD_ENABLE_BORDER_ROUTER
 void Interpreter::ProcessNetworkDataRegister(int argc, char *argv[])
@@ -2911,11 +2982,6 @@ void Interpreter::ProcessMacFilter(int argc, char *argv[])
         }
     }
 
-    if (error != OT_ERROR_NONE)
-    {
-        otThreadErrorToString(error);
-    }
-
     AppendResult(error);
 }
 
@@ -3260,10 +3326,23 @@ void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength, Server &aServer)
         }
     }
 
-    // Error prompt for unsupported commands
+    // Check user defined commands if built-in command
+    // has not been found
     if (i == sizeof(sCommands) / sizeof(sCommands[0]))
     {
-        AppendResult(OT_ERROR_PARSE);
+        for (i = 0; i < mUserCommandsLength; i++)
+        {
+            if (strcmp(cmd, mUserCommands[i].mName) == 0)
+            {
+                mUserCommands[i].mCommand(argc, argv);
+                break;
+            }
+        }
+
+        if (i == mUserCommandsLength)
+        {
+            AppendResult(OT_ERROR_PARSE);
+        }
     }
 
 exit:
@@ -3376,6 +3455,12 @@ void Interpreter::HandleDiagnosticGetResponse(Message &aMessage, const Ip6::Mess
     mServer->OutputFormat("\r\n");
 }
 #endif
+
+void Interpreter::SetUserCommands(const otCliCommand *aCommands, uint8_t aLength)
+{
+    mUserCommands = aCommands;
+    mUserCommandsLength = aLength;
+}
 
 Interpreter &Interpreter::GetOwner(const Context &aContext)
 {

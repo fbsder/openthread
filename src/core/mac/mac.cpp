@@ -991,8 +991,6 @@ void Mac::TransmitDoneTask(otRadioFrame *aFrame, otRadioFrame *aAckFrame, otErro
 
     mMacTimer.Stop();
 
-    mCounters.mTxTotal++;
-
     txFrame->GetDstAddr(addr);
 
     if (aError == OT_ERROR_NONE && txFrame->GetAckRequest() && aAckFrame != NULL)
@@ -1007,17 +1005,6 @@ void Mac::TransmitDoneTask(otRadioFrame *aFrame, otRadioFrame *aAckFrame, otErro
         {
             neighbor->GetLinkInfo().AddRss(GetNoiseFloor(), ackFrame->GetPower());
         }
-    }
-
-    if (addr.mShortAddress == kShortAddrBroadcast)
-    {
-        // Broadcast frame
-        mCounters.mTxBroadcast++;
-    }
-    else
-    {
-        // Unicast frame
-        mCounters.mTxUnicast++;
     }
 
     if (aError == OT_ERROR_ABORT)
@@ -1171,8 +1158,6 @@ void Mac::HandleMacTimer(Timer &aTimer)
 
 void Mac::HandleMacTimer(void)
 {
-    Address addr;
-
     switch (mOperation)
     {
     case kOperationActiveScan:
@@ -1200,21 +1185,6 @@ void Mac::HandleMacTimer(void)
 
     case kOperationTransmitData:
         otLogDebgMac(GetInstance(), "Ack timer fired");
-        mCounters.mTxTotal++;
-
-        mTxFrame->GetDstAddr(addr);
-
-        if (addr.mShortAddress == kShortAddrBroadcast)
-        {
-            // Broadcast frame
-            mCounters.mTxBroadcast++;
-        }
-        else
-        {
-            // Unicast Frame
-            mCounters.mTxUnicast++;
-        }
-
         SentFrame(OT_ERROR_NO_ACK);
         break;
 
@@ -1263,6 +1233,7 @@ void Mac::SentFrame(otError aError)
 {
     Frame &sendFrame(*mTxFrame);
     Sender *sender;
+    Address addr;
 
     mTransmitAttempts++;
 
@@ -1301,6 +1272,26 @@ void Mac::SentFrame(otError aError)
 
     mTransmitAttempts = 0;
     mCsmaAttempts = 0;
+
+    mCounters.mTxTotal++;
+
+    if (aError == OT_ERROR_CHANNEL_ACCESS_FAILURE)
+    {
+        mCounters.mTxErrBusyChannel++;
+    }
+
+    mTxFrame->GetDstAddr(addr);
+
+    if (addr.mShortAddress == kShortAddrBroadcast)
+    {
+        // Broadcast frame
+        mCounters.mTxBroadcast++;
+    }
+    else
+    {
+        // Unicast Frame
+        mCounters.mTxUnicast++;
+    }
 
     if (sendFrame.GetAckRequest())
     {
@@ -1804,8 +1795,8 @@ exit:
             mCounters.mRxErrInvalidSrcAddr++;
             break;
 
-        case OT_ERROR_WHITELIST_FILTERED:
-            mCounters.mRxWhitelistFiltered++;
+        case OT_ERROR_ADDRESS_FILTERED:
+            mCounters.mRxAddressFiltered++;
             break;
 
         case OT_ERROR_DESTINATION_ADDRESS_FILTERED:
@@ -1836,10 +1827,10 @@ otError Mac::HandleMacCommand(Frame &aFrame)
         mCounters.mRxBeaconRequest++;
         otLogInfoMac(GetInstance(), "Received Beacon Request");
 
-        if ((mBeaconsEnabled)
-#if OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_IF_JOINABLE
-            && (IsBeaconJoinable())
-#endif // OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_IF_JOINABLE
+        if (mBeaconsEnabled
+#if OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_WHEN_JOINABLE
+            || IsBeaconJoinable()
+#endif // OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_WHEN_JOINABLE
            )
         {
             StartOperation(kOperationTransmitBeacon);
@@ -1902,10 +1893,10 @@ void Mac::FillMacCountersTlv(NetworkDiagnostic::MacCountersTlv &aMacCounters) co
     aMacCounters.SetIfOutErrors(mCounters.mTxErrCca);
     aMacCounters.SetIfInUcastPkts(mCounters.mRxUnicast);
     aMacCounters.SetIfInBroadcastPkts(mCounters.mRxBroadcast);
-    aMacCounters.SetIfInDiscards(mCounters.mRxWhitelistFiltered + mCounters.mRxDestAddrFiltered + mCounters.mRxDuplicated);
+    aMacCounters.SetIfInDiscards(mCounters.mRxAddressFiltered + mCounters.mRxDestAddrFiltered + mCounters.mRxDuplicated);
     aMacCounters.SetIfOutUcastPkts(mCounters.mTxUnicast);
     aMacCounters.SetIfOutBroadcastPkts(mCounters.mTxBroadcast);
-    aMacCounters.SetIfOutDiscards(0);
+    aMacCounters.SetIfOutDiscards(mCounters.mTxErrBusyChannel);
 }
 
 void Mac::ResetCounters(void)
@@ -1913,7 +1904,7 @@ void Mac::ResetCounters(void)
     memset(&mCounters, 0, sizeof(mCounters));
 }
 
-#if OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_IF_JOINABLE
+#if OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_WHEN_JOINABLE
 bool Mac::IsBeaconJoinable(void)
 {
     uint8_t numUnsecurePorts;
@@ -1932,7 +1923,7 @@ bool Mac::IsBeaconJoinable(void)
 
     return joinable;
 }
-#endif // OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_IF_JOINABLE
+#endif // OPENTHREAD_CONFIG_ENABLE_BEACON_RSP_WHEN_JOINABLE
 
 Mac &Mac::GetOwner(const Context &aContext)
 {
