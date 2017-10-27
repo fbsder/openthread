@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2016-2017, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,61 +28,61 @@
 
 /**
  * @file
- *   This file implements the OpenThread Network Data API.
+ *   This file implements the OpenThread Server API.
  */
 
-#include "openthread-core-config.h"
+#include <openthread/config.h>
 
-#include <openthread/netdata.h>
+#if OPENTHREAD_ENABLE_SERVICE
+
+#include <openthread/server.h>
 
 #include "openthread-instance.h"
 
 using namespace ot;
 
-otError otNetDataGet(otInstance *aInstance, bool aStable, uint8_t *aData, uint8_t *aDataLength)
+otError otServerGetNetDataLocal(otInstance *aInstance, bool aStable, uint8_t *aData, uint8_t *aDataLength)
 {
     otError error = OT_ERROR_NONE;
 
     VerifyOrExit(aData != NULL && aDataLength != NULL, error = OT_ERROR_INVALID_ARGS);
 
-    error = aInstance->mThreadNetif.GetNetworkDataLeader().GetNetworkData(aStable, aData, *aDataLength);
+    error = aInstance->mThreadNetif.GetNetworkDataLocal().GetNetworkData(aStable, aData, *aDataLength);
 
 exit:
     return error;
 }
 
-otError otNetDataGetNextOnMeshPrefix(otInstance *aInstance, otNetworkDataIterator *aIterator,
-                                     otBorderRouterConfig *aConfig)
+otError otServerAddService(otInstance *aInstance, const otServiceConfig *aConfig)
+{
+    return aInstance->mThreadNetif.GetNetworkDataLocal().AddService(
+               aConfig->mEnterpriseNumber, &aConfig->mServiceData[0], aConfig->mServiceDataLength,
+               aConfig->mServerConfig.mStable, &aConfig->mServerConfig.mServerData[0], aConfig->mServerConfig.mServerDataLength
+           );
+}
+
+otError otServerRemoveService(otInstance *aInstance, uint32_t aEnterpriseNumber, uint8_t *aServiceData,
+                              uint8_t aServiceDataLength)
+{
+    return aInstance->mThreadNetif.GetNetworkDataLocal().RemoveService(aEnterpriseNumber, aServiceData, aServiceDataLength);
+}
+
+otError otServerGetNextService(otInstance *aInstance, otNetworkDataIterator *aIterator,
+                               otServiceConfig *aConfig)
 {
     otError error = OT_ERROR_NONE;
 
     VerifyOrExit(aIterator && aConfig, error = OT_ERROR_INVALID_ARGS);
 
-    error = aInstance->mThreadNetif.GetNetworkDataLeader().GetNextOnMeshPrefix(aIterator, aConfig);
+    error = aInstance->mThreadNetif.GetNetworkDataLocal().GetNextService(aIterator, aConfig);
 
 exit:
     return error;
 }
 
-otError otNetDataGetNextRoute(otInstance *aInstance, otNetworkDataIterator *aIterator,
-                              otExternalRouteConfig *aConfig)
+otError otServerRegister(otInstance *aInstance)
 {
-    otError error = OT_ERROR_NONE;
-
-    VerifyOrExit(aIterator && aConfig, error = OT_ERROR_INVALID_ARGS);
-
-    error = aInstance->mThreadNetif.GetNetworkDataLeader().GetNextExternalRoute(aIterator, aConfig);
-
-exit:
-    return error;
+    return aInstance->mThreadNetif.GetNetworkDataLocal().SendServerDataNotification();
 }
 
-uint8_t otNetDataGetVersion(otInstance *aInstance)
-{
-    return aInstance->mThreadNetif.GetMle().GetLeaderDataTlv().GetDataVersion();
-}
-
-uint8_t otNetDataGetStableVersion(otInstance *aInstance)
-{
-    return aInstance->mThreadNetif.GetMle().GetLeaderDataTlv().GetStableDataVersion();
-}
+#endif  // OPENTHREAD_ENABLE_SERVICE

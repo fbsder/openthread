@@ -34,6 +34,8 @@
 #ifndef DTLS_HPP_
 #define DTLS_HPP_
 
+#include "openthread-core-config.h"
+
 #include <openthread/types.h>
 
 #include <mbedtls/ssl.h>
@@ -55,7 +57,7 @@ class ThreadNetif;
 
 namespace MeshCoP {
 
-class Dtls: public ThreadNetifLocator
+class Dtls: public InstanceLocator
 {
 public:
     enum
@@ -70,7 +72,7 @@ public:
      * @param[in]  aNetif  A reference to the Thread network interface.
      *
      */
-    Dtls(ThreadNetif &aNetif);
+    Dtls(otInstance &aInstance);
 
     /**
      * This function pointer is called when a connection is established or torn down.

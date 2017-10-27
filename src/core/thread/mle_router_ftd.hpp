@@ -31,8 +31,10 @@
  *   This file includes definitions for MLE functionality required by the Thread Router and Leader roles.
  */
 
-#ifndef MLE_ROUTER_HPP_
-#define MLE_ROUTER_HPP_
+#ifndef MLE_ROUTER_FTD_HPP_
+#define MLE_ROUTER_FTD_HPP_
+
+#include "openthread-core-config.h"
 
 #include "utils/wrap_string.h"
 
@@ -77,10 +79,10 @@ public:
     /**
      * This constructor initializes the object.
      *
-     * @param[in]  aThreadNetif  A reference to the Thread network interface.
+     * @param[in]  aInstance     A reference to the OpenThread instance.
      *
      */
-    explicit MleRouter(ThreadNetif &aThreadNetif);
+    explicit MleRouter(otInstance &aInstance);
 
     /**
      * This method indicates whether or not the Router Role is enabled.
@@ -848,4 +850,4 @@ private:
 
 }  // namespace ot
 
-#endif  // MLE_ROUTER_HPP_
+#endif  // MLE_ROUTER_FTD_HPP_

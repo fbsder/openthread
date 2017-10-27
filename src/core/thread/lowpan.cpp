@@ -31,8 +31,6 @@
  *   This file implements 6LoWPAN header compression.
  */
 
-#include <openthread/config.h>
-
 #include "lowpan.hpp"
 
 #include "common/code_utils.hpp"
@@ -48,8 +46,8 @@ using ot::Encoding::BigEndian::HostSwap16;
 namespace ot {
 namespace Lowpan {
 
-Lowpan::Lowpan(ThreadNetif &aThreadNetif):
-    ThreadNetifLocator(aThreadNetif)
+Lowpan::Lowpan(otInstance &aInstance):
+    InstanceLocator(aInstance)
 {
 }
 
@@ -1180,7 +1178,7 @@ otError FragmentHeader::Init(const uint8_t *aFrame, uint8_t aFrameLength)
     otError error = OT_ERROR_PARSE;
 
     VerifyOrExit(aFrameLength >= sizeof(mDispatchSize) + sizeof(mTag));
-    memcpy(&mDispatchSize, aFrame, sizeof(mDispatchSize) + sizeof(mTag));
+    memcpy(reinterpret_cast<uint8_t *>(&mDispatchSize), aFrame, sizeof(mDispatchSize) + sizeof(mTag));
     aFrame += sizeof(mDispatchSize) + sizeof(mTag);
     aFrameLength -= sizeof(mDispatchSize) + sizeof(mTag);
 

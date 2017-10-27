@@ -31,8 +31,6 @@
  *   This file implements the CLI interpreter.
  */
 
-#include <openthread/config.h>
-
 #include "cli.hpp"
 
 #ifdef OTDLL
@@ -56,6 +54,9 @@
 
 #if OPENTHREAD_ENABLE_BORDER_ROUTER
 #include <openthread/border_router.h>
+#endif
+#if OPENTHREAD_ENABLE_SERVICE
+#include <openthread/server.h>
 #endif
 
 #ifndef OTDLL
@@ -165,8 +166,11 @@ const struct Command Interpreter::sCommands[] =
 #if OPENTHREAD_FTD
     { "neighbor", &Interpreter::ProcessNeighbor },
 #endif
-#if OPENTHREAD_ENABLE_BORDER_ROUTER
+#if OPENTHREAD_ENABLE_BORDER_ROUTER || OPENTHREAD_ENABLE_SERVICE
     { "netdataregister", &Interpreter::ProcessNetworkDataRegister },
+#endif
+#if OPENTHREAD_ENABLE_SERVICE
+    { "netdatashow", &Interpreter::ProcessNetworkDataShow },
 #endif
 #if OPENTHREAD_FTD || OPENTHREAD_ENABLE_MTD_NETWORK_DIAGNOSTIC
     { "networkdiagnostic", &Interpreter::ProcessNetworkDiagnostic },
@@ -207,6 +211,9 @@ const struct Command Interpreter::sCommands[] =
     { "routerupgradethreshold", &Interpreter::ProcessRouterUpgradeThreshold },
 #endif
     { "scan", &Interpreter::ProcessScan },
+#if OPENTHREAD_ENABLE_SERVICE
+    { "service", &Interpreter::ProcessService },
+#endif
     { "singleton", &Interpreter::ProcessSingleton },
     { "state", &Interpreter::ProcessState },
     { "thread", &Interpreter::ProcessThread },
@@ -471,13 +478,14 @@ void Interpreter::ProcessChild(int argc, char *argv[])
 {
     otError error = OT_ERROR_NONE;
     otChildInfo childInfo;
-    uint8_t maxChildren;
     long value;
-    bool isTable = false;
+    bool isTable;
 
     VerifyOrExit(argc > 0, error = OT_ERROR_PARSE);
 
-    if (strcmp(argv[0], "list") == 0 || (isTable = (strcmp(argv[0], "table") == 0)))
+    isTable = (strcmp(argv[0], "table") == 0);
+
+    if (isTable || strcmp(argv[0], "list") == 0)
     {
         if (isTable)
         {
@@ -485,11 +493,11 @@ void Interpreter::ProcessChild(int argc, char *argv[])
             mServer->OutputFormat("+-----+--------+------------+------------+-------+------+-+-+-+-+------------------+\r\n");
         }
 
-        maxChildren = otThreadGetMaxAllowedChildren(mInstance);
-
-        for (uint8_t i = 0; i < maxChildren ; i++)
+        // For certifcation: here intentionally not limits the upperbound for the index,
+        // giving the chance to exit from below default case as OpenThread THCI expects
+        // the content of "child list" and the result "Done" in seperate lines.
+        for (uint8_t i = 0; ; i++)
         {
-
             switch (otThreadGetChildInfoByIndex(mInstance, i, &childInfo))
             {
             case OT_ERROR_NONE:
@@ -532,8 +540,6 @@ void Interpreter::ProcessChild(int argc, char *argv[])
                 }
             }
         }
-
-        ExitNow();
     }
 
     SuccessOrExit(error = ParseLong(argv[0], value));
@@ -1417,12 +1423,14 @@ void Interpreter::ProcessNeighbor(int argc, char *argv[])
 {
     otError error = OT_ERROR_NONE;
     otNeighborInfo neighborInfo;
-    bool isTable = false;
+    bool isTable;
     otNeighborInfoIterator iterator = OT_NEIGHBOR_INFO_ITERATOR_INIT;
 
     VerifyOrExit(argc > 0, error = OT_ERROR_PARSE);
 
-    if (strcmp(argv[0], "list") == 0 || (isTable = (strcmp(argv[0], "table") == 0)))
+    isTable = (strcmp(argv[0], "table") == 0);
+
+    if (isTable || strcmp(argv[0], "list") == 0)
     {
         if (isTable)
         {
@@ -1470,18 +1478,81 @@ exit:
 }
 #endif
 
-#if OPENTHREAD_ENABLE_BORDER_ROUTER
-void Interpreter::ProcessNetworkDataRegister(int argc, char *argv[])
+#if OPENTHREAD_ENABLE_SERVICE
+void Interpreter::ProcessNetworkDataShow(int argc, char *argv[])
 {
     otError error = OT_ERROR_NONE;
-    SuccessOrExit(error = otBorderRouterRegister(mInstance));
+    uint8_t data[255];
+    uint8_t len = sizeof(data);
+
+    SuccessOrExit(error = otNetDataGet(mInstance, false, data, &len));
+
+    this->OutputBytes(data, static_cast<uint8_t>(len));
+    mServer->OutputFormat("\r\n");
 
 exit:
     OT_UNUSED_VARIABLE(argc);
     OT_UNUSED_VARIABLE(argv);
     AppendResult(error);
 }
-#endif  // OPENTHREAD_ENABLE_BORDER_ROUTER
+
+void Interpreter::ProcessService(int argc, char *argv[])
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(argc > 0, error = OT_ERROR_PARSE);
+
+    if (strcmp(argv[0], "add") == 0)
+    {
+        otServiceConfig cfg;
+        long enterpriseNumber = 0;
+
+        VerifyOrExit(argc > 3, error = OT_ERROR_PARSE);
+
+        SuccessOrExit(error = ParseLong(argv[1], enterpriseNumber));
+
+        cfg.mServiceDataLength = static_cast<uint8_t>(strlen(argv[2]));
+        memcpy(cfg.mServiceData, argv[2], cfg.mServiceDataLength);
+        cfg.mEnterpriseNumber = static_cast<uint32_t>(enterpriseNumber);
+        cfg.mServerConfig.mStable = true;
+        cfg.mServerConfig.mServerDataLength = static_cast<uint8_t>(strlen(argv[3]));
+        memcpy(cfg.mServerConfig.mServerData, argv[3], cfg.mServerConfig.mServerDataLength);
+
+        SuccessOrExit(error = otServerAddService(mInstance, &cfg));
+    }
+    else if (strcmp(argv[0], "remove") == 0)
+    {
+        long enterpriseNumber = 0;
+
+        VerifyOrExit(argc > 2, error = OT_ERROR_PARSE);
+
+        SuccessOrExit(error = ParseLong(argv[1], enterpriseNumber));
+
+        SuccessOrExit(error = otServerRemoveService(mInstance, static_cast<uint32_t>(enterpriseNumber),
+                                                    reinterpret_cast<uint8_t *>(argv[2]), static_cast<uint8_t>(strlen(argv[2]))));
+    }
+
+exit:
+    AppendResult(error);
+}
+#endif
+
+#if OPENTHREAD_ENABLE_BORDER_ROUTER || OPENTHREAD_ENABLE_SERVICE
+void Interpreter::ProcessNetworkDataRegister(int argc, char *argv[])
+{
+    otError error = OT_ERROR_NONE;
+#if OPENTHREAD_ENABLE_BORDER_ROUTER
+    SuccessOrExit(error = otBorderRouterRegister(mInstance));
+#else
+    SuccessOrExit(error = otServerRegister(mInstance));
+#endif
+
+exit:
+    OT_UNUSED_VARIABLE(argc);
+    OT_UNUSED_VARIABLE(argv);
+    AppendResult(error);
+}
+#endif  // OPENTHREAD_ENABLE_BORDER_ROUTER || OPENTHREAD_ENABLE_SERVICE
 
 #if OPENTHREAD_FTD
 void Interpreter::ProcessNetworkIdTimeout(int argc, char *argv[])
@@ -2229,11 +2300,13 @@ void Interpreter::ProcessRouter(int argc, char *argv[])
     otError error = OT_ERROR_NONE;
     otRouterInfo routerInfo;
     long value;
-    bool isTable = false;
+    bool isTable;
 
     VerifyOrExit(argc > 0, error = OT_ERROR_PARSE);
 
-    if (strcmp(argv[0], "list") == 0 || (isTable = (strcmp(argv[0], "table") == 0)))
+    isTable = (strcmp(argv[0], "table") == 0);
+
+    if (isTable || strcmp(argv[0], "list") == 0)
     {
         if (isTable)
         {
@@ -3387,36 +3460,34 @@ exit:
 void Interpreter::ProcessNetworkDiagnostic(int argc, char *argv[])
 {
     otError error = OT_ERROR_NONE;
-    struct otIp6Address address;
-    uint8_t payload[2 + OT_NETWORK_DIAGNOSTIC_TYPELIST_MAX_ENTRIES];  // TypeList Type(1B), len(1B), type list
-    uint8_t payloadIndex = 0;
-    uint8_t paramIndex = 0;
+    struct  otIp6Address address;
+    uint8_t tlvTypes[OT_NETWORK_DIAGNOSTIC_TYPELIST_MAX_ENTRIES];
+    uint8_t count = 0;
+    uint8_t argvIndex = 0;
 
-    VerifyOrExit(argc > 1 + 1, error = OT_ERROR_PARSE);
+    // Include operation, address and type tlv list.
+    VerifyOrExit(argc > 2, error = OT_ERROR_PARSE);
 
     SuccessOrExit(error = otIp6AddressFromString(argv[1], &address));
 
-    payloadIndex = 2;
-    paramIndex = 2;
+    argvIndex = 2;
 
-    while (paramIndex < argc && payloadIndex < sizeof(payload))
+    while (argvIndex < argc && count < sizeof(tlvTypes))
     {
         long value;
-        SuccessOrExit(error = ParseLong(argv[paramIndex++], value));
-        payload[payloadIndex++] = static_cast<uint8_t>(value);
+        SuccessOrExit(error = ParseLong(argv[argvIndex++], value));
+        tlvTypes[count++] = static_cast<uint8_t>(value);
     }
-
-    payload[0] = OT_NETWORK_DIAGNOSTIC_TYPELIST_TYPE;  // TypeList TLV Type
-    payload[1] = payloadIndex - 2;  // length
 
     if (strcmp(argv[0], "get") == 0)
     {
-        otThreadSendDiagnosticGet(mInstance, &address, payload, payloadIndex);
+        otThreadSendDiagnosticGet(mInstance, &address, tlvTypes, count);
+        // Intentionally exit here for display response.
         return;
     }
     else if (strcmp(argv[0], "reset") == 0)
     {
-        otThreadSendDiagnosticReset(mInstance, &address, payload, payloadIndex);
+        otThreadSendDiagnosticReset(mInstance, &address, tlvTypes, count);
     }
 
 exit:
@@ -3439,7 +3510,7 @@ void Interpreter::HandleDiagnosticGetResponse(Message &aMessage, const Ip6::Mess
     uint16_t bytesPrinted = 0;
     uint16_t length = aMessage.GetLength() - aMessage.GetOffset();
 
-    mServer->OutputFormat("DIAG_GET.rsp: ");
+    mServer->OutputFormat("DIAG_GET.rsp/ans: ");
 
     while (length > 0)
     {

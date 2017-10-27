@@ -34,9 +34,10 @@
 #ifndef ADDRESS_RESOLVER_HPP_
 #define ADDRESS_RESOLVER_HPP_
 
+#include "openthread-core-config.h"
+
 #include <openthread/types.h>
 
-#include "openthread-core-config.h"
 #include "coap/coap.hpp"
 #include "common/locator.hpp"
 #include "common/timer.hpp"
@@ -65,14 +66,14 @@ class ThreadTargetTlv;
  * This class implements the EID-to-RLOC mapping and caching.
  *
  */
-class AddressResolver: public ThreadNetifLocator
+class AddressResolver: public InstanceLocator
 {
 public:
     /**
      * This constructor initializes the object.
      *
      */
-    explicit AddressResolver(ThreadNetif &aThreadNetif);
+    explicit AddressResolver(otInstance &aInstance);
 
     /**
      * This method clears the EID-to-RLOC cache.

@@ -63,6 +63,7 @@ set -x
         --enable-mac-filter               \
         --enable-mtd-network-diagnostic   \
         --enable-raw-link-api             \
+        --enable-service                  \
         --enable-tmf-proxy || die
     scan-build --status-bugs -analyze-headers -v make || die
 }
@@ -231,12 +232,13 @@ set -x
         --enable-ncp-app=all                \
         --with-ncp-bus=spi                  \
         --with-examples=posix               \
-        --enable-diag                       \
-        --enable-legacy                     \
-        --enable-jam-detection              \
-        --enable-child-supervision          \
         --enable-border-router              \
+        --enable-child-supervision          \
+        --enable-diag                       \
+        --enable-jam-detection              \
+        --enable-legacy                     \
         --enable-mac-filter                 \
+        --enable-service                    \
         --disable-docs                      \
         --disable-test || die
     make -j 8 || die
@@ -248,10 +250,11 @@ set -x
         --enable-cli-app=mtd                \
         --with-ncp-bus=spi                  \
         --with-examples=posix               \
-        --enable-legacy                     \
-        --enable-child-supervision          \
         --enable-border-router              \
+        --enable-child-supervision          \
+        --enable-legacy                     \
         --enable-mac-filter                 \
+        --enable-service                    \
         --disable-docs                      \
         --disable-test || die
     make -j 8 || die

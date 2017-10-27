@@ -34,6 +34,8 @@
 #ifndef MAC_FILTER_HPP_
 #define MAC_FILTER_HPP_
 
+#include "openthread-core-config.h"
+
 #include "utils/wrap_stdint.h"
 
 #include <openthread/types.h>
@@ -197,7 +199,8 @@ public:
      * @param[out] aRss         A reference to where the received signal strength to be placed.
      *
      * @retval OT_ERROR_NONE                Successfully applied the filter rules on @p aExtAddress.
-     * @retval OT_ERROR_ADDRESS_FILTERED    Address filter (whitelist or blacklist) is enabled and @p aExtAddress is filtered.
+     * @retval OT_ERROR_ADDRESS_FILTERED    Address filter (whitelist or blacklist) is enabled and @p aExtAddress is
+     *                                      filtered.
      *
      */
     otError Apply(const ExtAddress &aExtAddress, int8_t &aRss);

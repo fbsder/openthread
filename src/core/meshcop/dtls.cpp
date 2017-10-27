@@ -32,7 +32,6 @@
  */
 
 #define WPP_NAME "dtls.tmh"
-#include <openthread/config.h>
 
 #include "dtls.hpp"
 
@@ -53,11 +52,11 @@
 namespace ot {
 namespace MeshCoP {
 
-Dtls::Dtls(ThreadNetif &aNetif):
-    ThreadNetifLocator(aNetif),
+Dtls::Dtls(otInstance &aInstance):
+    InstanceLocator(aInstance),
     mPskLength(0),
     mStarted(false),
-    mTimer(aNetif.GetInstance(), &Dtls::HandleTimer, this),
+    mTimer(aInstance, &Dtls::HandleTimer, this),
     mTimerIntermediate(0),
     mTimerSet(false),
     mReceiveMessage(NULL),

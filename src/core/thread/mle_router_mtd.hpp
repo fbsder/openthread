@@ -31,8 +31,10 @@
  *   This file includes definitions for MLE functionality required by the Thread Router and Leader roles.
  */
 
-#ifndef MLE_ROUTER_HPP_
-#define MLE_ROUTER_HPP_
+#ifndef MLE_ROUTER_MTD_HPP_
+#define MLE_ROUTER_MTD_HPP_
+
+#include "openthread-core-config.h"
 
 #include "utils/wrap_string.h"
 
@@ -48,7 +50,7 @@ class MleRouter: public Mle
     friend class Mle;
 
 public:
-    explicit MleRouter(ThreadNetif &aThreadNetif) : Mle(aThreadNetif) { }
+    explicit MleRouter(otInstance &aInstance) : Mle(aInstance) { }
 
     bool IsSingleton(void) { return false; }
 
@@ -155,4 +157,4 @@ private:
 }  // namespace Mle
 }  // namespace ot
 
-#endif  // MLE_ROUTER_HPP_
+#endif  // MLE_ROUTER_MTD_HPP_

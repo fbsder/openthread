@@ -69,6 +69,16 @@ extern "C" {
 #endif /* _WIN32 */
 
 /**
+ * @addtogroup api-types
+ *
+ * @brief
+ *   This module includes API types
+ *
+ * @{
+ *
+ */
+
+/**
  * This type represents the OpenThread instance structure.
  */
 typedef struct otInstance otInstance;
@@ -273,11 +283,9 @@ typedef enum otError
 #define OT_MASTER_KEY_SIZE         16  ///< Size of the Thread Master Key (bytes)
 
 /**
- * Concatenated List of Type Identifiers of Other Diagnostics TLVs Used to Request or Reset Multiple Diagnostic Values.
+ * Maximum Number of Network Diagnostic TLV Types to Request or Reset.
  */
-#define OT_NETWORK_DIAGNOSTIC_TYPELIST_TYPE          18
-
-#define OT_NETWORK_DIAGNOSTIC_TYPELIST_MAX_ENTRIES   19  ///< Maximum Number of Other Network Diagnostic TLV Types
+#define OT_NETWORK_DIAGNOSTIC_TYPELIST_MAX_ENTRIES   19
 
 /**
  * @struct otMasterKey
@@ -408,7 +416,7 @@ typedef struct otExtAddress
 OT_TOOL_PACKED_BEGIN
 struct otIp6Address
 {
-    union
+    union OT_TOOL_PACKED_FIELD
     {
         uint8_t  m8[OT_IP6_ADDRESS_SIZE];                      ///< 8-bit fields
         uint16_t m16[OT_IP6_ADDRESS_SIZE / sizeof(uint16_t)];  ///< 16-bit fields
@@ -685,11 +693,17 @@ enum
 /**
  * This structure represents an IPv6 prefix.
  */
-typedef struct otIp6Prefix
+OT_TOOL_PACKED_BEGIN
+struct otIp6Prefix
 {
     otIp6Address  mPrefix;  ///< The IPv6 prefix.
     uint8_t       mLength;  ///< The IPv6 prefix length.
-} otIp6Prefix;
+} OT_TOOL_PACKED_END;
+
+/**
+ * This type represents an IPv6 prefix.
+ */
+typedef struct otIp6Prefix otIp6Prefix;
 
 #define OT_NETWORK_DATA_ITERATOR_INIT  0    ///< Initializer for otNetworkDataIterator.
 
@@ -797,6 +811,68 @@ typedef enum otRoutePreference
     OT_ROUTE_PREFERENCE_MED  = 0,   ///< Medium route preference.
     OT_ROUTE_PREFERENCE_HIGH = 1,   ///< High route preference.
 } otRoutePreference;
+
+enum
+{
+    /**
+     * Maximum size of Service Data in bytes.
+     */
+    kMaxServiceDataSize = 252,
+
+    /**
+     * Maximum size of Server Data in bytes. This is theoretical limit, practical one is much lower.
+     */
+    kMaxServerDataSize = 248,
+};
+
+/**
+ * This structure represents a Server configuration.
+ */
+typedef struct otServerConfig
+{
+    /**
+     * TRUE, if this configuration is considered Stable Network Data.  FALSE, otherwise.
+     */
+    bool mStable : 1;
+
+    /**
+     * Length of server data.
+     */
+    uint8_t mServerDataLength;
+
+    /**
+     * Server data bytes
+     */
+    uint8_t mServerData[kMaxServerDataSize];
+
+    /**
+     * The Server Rloc.
+     */
+    uint16_t mRloc16;
+} otServerConfig;
+
+/**
+ * This structure represents a Service configuration.
+ */
+typedef struct otServiceConfig
+{
+    /**
+     * IANA Enterprise Number.
+     */
+    uint32_t mEnterpriseNumber;
+
+    /**
+     * Length of service data.
+     */
+    uint8_t mServiceDataLength;
+
+    /**
+     * Service data bytes
+     */
+    uint8_t mServiceData[kMaxServiceDataSize];
+
+    otServerConfig mServerConfig;
+} otServiceConfig;
 
 /**
  * Used to indicate no fixed received signal strength was set
@@ -1127,6 +1203,10 @@ typedef enum otLogRegion
     OT_LOG_REGION_CLI      = 14, ///< CLI
 } otLogRegion;
 
+/**
+ * @}
+ *
+ */
 
 #ifdef __cplusplus
 }  // extern "C"
